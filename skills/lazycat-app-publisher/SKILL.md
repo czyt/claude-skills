@@ -7,6 +7,31 @@ preferences:
     description: Automatically add "/" to application.public_path in the generated manifest
     type: boolean
     default: true
+  - id: manifest_multilingual
+    name: Manifest Multilingual Support
+    description: Generate locales with both English and Chinese in manifest files
+    type: boolean
+    default: true
+  - id: simple_app_optimization
+    name: Simple App Optimization
+    description: Skip lzc-deploy-params.yml generation for simple applications
+    type: boolean
+    default: true
+  - id: auto_healthcheck
+    name: Auto Healthcheck
+    description: Automatically add healthcheck configurations to services
+    type: boolean
+    default: true
+  - id: auto_resource_limits
+    name: Auto Resource Limits
+    description: Automatically add reasonable resource limits to services
+    type: boolean
+    default: true
+  - id: minimal_docs
+    name: Minimal Documentation
+    description: Generate only README.md with essential info, skip other markdown files
+    type: boolean
+    default: true
 ---
 
 # LazyCat App Publisher
@@ -468,9 +493,25 @@ locales:
 1. ✅ **No `lzc-sdk-version`** - Removed in modern format
 2. ✅ **Add `min_os_version: 1.3.8`** - Required for new apps
 3. ✅ **Use `healthcheck`** (one word, no underscore) for services - **100% Docker Compose compatible**
-4. ✅ **Use `upstreams`** instead of `routes` for HTTP services (recommended)
+4. ✅ **Use `upstreams`** instead of `routes` for HTTP services (⭐ **Recommended**)
 5. ✅ **Auto-generate internal credentials** with `{{.INTERNAL.xxx}}`
 6. ✅ **User config** uses `{{.U.xxx}}`
+
+**Upstreams vs Routes:**
+```yaml
+# ✅ Recommended - Upstreams (modern, cleaner)
+application:
+  subdomain: myapp
+  upstreams:
+    - location: /
+      backend: http://myapp:8080/
+
+# ⚠️ Legacy - Routes (still supported but not recommended)
+application:
+  subdomain: myapp
+  routes:
+    - /=http://myapp.cloud.lazycat.app.myapp.lzcapp:8080
+```
 
 ### ❌ Avoid - Common Mistakes
 ```yaml
@@ -745,7 +786,145 @@ application:
 
 **When to disable**: If your application doesn't need public path access or if you want to manually configure public_path later.
 
-**How to configure**: You can configure this preference in your Claude Code settings under skill preferences.
+### Manifest Multilingual Support (default: true)
+
+**ID**: `manifest_multilingual`
+
+When enabled (default), the skill automatically generates `locales` with both English and Chinese translations in the manifest.yml file. This provides multi-language support for LazyCat Cloud applications.
+
+**Example Output** (when enabled):
+```yaml
+locales:
+  en:
+    name: "My App"
+    description: "A great application"
+  zh:
+    name: "我的应用"
+    description: "一个很棒的应用程序"
+```
+
+**Example Output** (when disabled):
+```yaml
+locales:
+  zh:
+    name: "My App"
+    description: "A great application"
+```
+
+**When to disable**: If you only need single language support or want to manually configure locales.
+
+### Simple App Optimization (default: true)
+
+**ID**: `simple_app_optimization`
+
+When enabled (default), the skill automatically detects simple applications and skips generating `lzc-deploy-params.yml` file. Simple applications are defined as:
+- Zero configuration required
+- No sensitive environment variables
+- No internal service dependencies
+- All parameters are optional
+
+**Detection Logic**:
+```python
+def is_simple_app(services):
+    for service in services:
+        # Check for sensitive env vars
+        if any('password' in env.lower() or 'secret' in env.lower()
+               for env in service.get('environment', [])):
+            return False
+        # Check for internal dependencies
+        if service.get('depends_on'):
+            return False
+    return True
+```
+
+**Example - Simple App (Taskpony)**:
+```yaml
+# Generated files:
+# ✅ lzc-manifest.yml
+# ✅ lzc-build.yml
+# ❌ lzc-deploy-params.yml (skipped)
+```
+
+**Example - Complex App**:
+```yaml
+# Generated files:
+# ✅ lzc-manifest.yml
+# ✅ lzc-build.yml
+# ✅ lzc-deploy-params.yml (includes db_password, redis_password, etc.)
+```
+
+**When to disable**: If you always want to generate deployment parameters, even for simple apps.
+
+### Auto Healthcheck (default: true)
+
+**ID**: `auto_healthcheck`
+
+When enabled (default), the skill automatically adds healthcheck configurations to services that don't have them, especially HTTP services.
+
+**Example**:
+```yaml
+services:
+  web:
+    image: nginx:latest
+    # Auto-added:
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - curl -f http://localhost:80/ || exit 1
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+```
+
+### Auto Resource Limits (default: true)
+
+**ID**: `auto_resource_limits`
+
+When enabled (default), the skill automatically adds reasonable resource limits to services.
+
+**Default Limits**:
+- `cpu_shares`: 512
+- `mem_limit`: 512M
+
+### Minimal Documentation (default: true)
+
+**ID**: `minimal_docs`
+
+When enabled (default), the skill generates only essential files, keeping the application directory clean and focused.
+
+**Generated Files (when enabled)**:
+```
+app-directory/
+├── lzc-manifest.yml      # Core configuration
+├── lzc-build.yml         # Build configuration
+├── build.sh              # Automation script
+└── README.md             # User guide only
+```
+
+**Generated Files (when disabled)**:
+```
+app-directory/
+├── lzc-manifest.yml      # Core configuration
+├── lzc-build.yml         # Build configuration
+├── build.sh              # Automation script
+├── README.md             # Full documentation
+├── QUICKSTART.md         # Quick start guide
+├── SUMMARY.md            # Technical summary
+├── PREFERENCES.md        # Preference documentation
+└── PREFERENCE-UPDATE-CONFIRM.md  # Update confirmation
+```
+
+**README.md Content (when enabled)**:
+- Application name and description
+- Installation instructions
+- Usage guide
+- Basic configuration info
+- Essential only
+
+**When to disable**: If you need comprehensive documentation for development or reference purposes.
+
+**How to configure**: You can configure these preferences in your Claude Code settings under skill preferences.
 
 ## How to Use
 
@@ -1171,7 +1350,7 @@ services:
 
 | Docker Feature | LazyCat Equivalent | Notes |
 |----------------|-------------------|-------|
-| `ports` | `application.routes` (HTTP) or `application.ingress` (TCP/UDP) | HTTP services use routes, others use ingress |
+| `ports` | `application.upstreams` (HTTP) or `application.ingress` (TCP/UDP) | ⭐ **Use upstreams for HTTP** |
 | `volumes` | `services.*.binds` | Must use `/lzcapp/var` or `/lzcapp/cache` paths |
 | `environment` | `services.*.environment` | Direct mapping |
 | `depends_on` | `services.*.depends_on` | Direct mapping |
@@ -1185,8 +1364,10 @@ services:
 - **LazyCat**: `/lzcapp/var/something:/container/path` or `/lzcapp/cache/something:/container/path`
 
 ### Port Mapping
-- **HTTP/HTTPS**: Use `application.routes`
-  - `80:80` → `-=http://subdomain.cloud.lazycat.app.package.lzcapp:80`
+- **HTTP/HTTPS**: Use `application.upstreams` ⭐ **Recommended**
+  - `80:80` → `upstreams: [{location: "/", backend: "http://service:80/"}]`
+- **Legacy**: `application.routes` (still supported)
+  - `80:80` → `routes: ["/=http://subdomain...lzcapp:80"]`
 - **TCP/UDP**: Use `application.ingress`
   - `22:22` → `protocol: tcp, port: 22, service: servicename`
 

@@ -107,6 +107,70 @@ application:
       backend: http://myapp:8080/
 ```
 
+### Manifest Multilingual Support (default: enabled)
+
+**Preference ID**: `manifest_multilingual`
+
+By default, the skill generates `locales` with both English and Chinese translations in manifest files.
+
+**With preference enabled (default)**:
+```yaml
+locales:
+  en:
+    name: "My App"
+    description: "Great application"
+  zh:
+    name: "我的应用"
+    description: "很棒的应用程序"
+```
+
+### Simple App Optimization (default: enabled)
+
+**Preference ID**: `simple_app_optimization`
+
+Automatically detects simple applications and skips `lzc-deploy-params.yml` generation.
+
+**Simple app characteristics**:
+- Zero configuration required
+- No sensitive environment variables
+- No internal dependencies
+
+**Result**: Simple apps like Taskpony generate only `lzc-manifest.yml` and `lzc-build.yml`.
+
+### Auto Healthcheck & Resource Limits (default: enabled)
+
+**Preference IDs**: `auto_healthcheck`, `auto_resource_limits`
+
+Automatically adds health checks and reasonable resource limits to services.
+
+### Minimal Documentation (default: enabled)
+
+**Preference ID**: `minimal_docs`
+
+Keeps application directory clean by generating only essential files.
+
+**When enabled (default)**:
+```
+app-directory/
+├── lzc-manifest.yml
+├── lzc-build.yml
+├── build.sh
+└── README.md  # User-focused guide only
+```
+
+**When disabled**:
+```
+app-directory/
+├── lzc-manifest.yml
+├── lzc-build.yml
+├── build.sh
+├── README.md
+├── QUICKSTART.md
+├── SUMMARY.md
+├── PREFERENCES.md
+└── PREFERENCE-UPDATE-CONFIRM.md
+```
+
 **How to configure**: Access skill preferences through Claude Code settings.
 
 ## 🚀 Quick Usage Examples
@@ -157,7 +221,7 @@ The skill includes comprehensive examples:
 
 | Docker Feature | LazyCat Equivalent |
 |----------------|-------------------|
-| `ports: ["80:80"]` | HTTP: `routes: ["/=http://...:80"]`<br>TCP/UDP: `ingress: [{port: 80}]` |
+| `ports: ["80:80"]` | HTTP: `upstreams: [{location: "/", backend: "http://service:80/"}]`<br>TCP/UDP: `ingress: [{port: 80}]` |
 | `volumes: ["./data:/app"]` | `binds: ["/lzcapp/var/data:/app"]` |
 | `environment: VAR=value` | `environment: ["VAR=value"]` |
 | `depends_on: ["db"]` | `depends_on: ["db"]` |
