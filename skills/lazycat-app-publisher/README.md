@@ -224,6 +224,7 @@ The skill includes comprehensive examples:
 | `ports: ["80:80"]` | HTTP: `upstreams: [{location: "/", backend: "http://service:80/"}]`<br>TCP/UDP: `ingress: [{port: 80}]` |
 | `volumes: ["./data:/app"]` | `binds: ["/lzcapp/var/data:/app"]` |
 | `environment: VAR=value` | `environment: ["VAR=value"]` |
+| `command: [sh, -c, cmd]` | ⚠️ `command: "sh -c 'cmd'"` **(must be string, not array)** |
 | `depends_on: ["db"]` | `depends_on: ["db"]` |
 | `restart: always` | `restart: always` |
 | `network_mode: host` | `network_mode: "host"` |

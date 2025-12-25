@@ -1355,6 +1355,7 @@ services:
 | `environment` | `services.*.environment` | Direct mapping |
 | `depends_on` | `services.*.depends_on` | Direct mapping |
 | `image` | `services.*.image` | Direct mapping |
+| `command` | `services.*.command` | ⚠️ **Must be string type** (not array) |
 | `restart` | `services.*.restart` | Supported in services |
 | `shm_size` | `services.*.shm_size` | Supported in services |
 | `network_mode` | `services.*.network_mode` | Only `host` mode supported |
@@ -1370,6 +1371,60 @@ services:
   - `80:80` → `routes: ["/=http://subdomain...lzcapp:80"]`
 - **TCP/UDP**: Use `application.ingress`
   - `22:22` → `protocol: tcp, port: 22, service: servicename`
+
+### Command Mapping
+
+**⚠️ Critical: LazyCat requires command to be a string, not an array**
+
+Docker Compose supports both string and array formats for `command`, but LazyCat **only supports string format**.
+
+**Conversion Examples:**
+
+```yaml
+# Docker Compose (array format) → LazyCat (string format)
+
+# Example 1: Simple command with arguments
+# Docker Compose:
+command:
+  - redis-server
+  - --requirepass
+  - mypassword
+# LazyCat:
+command: redis-server --requirepass mypassword
+
+# Example 2: Shell command with operators
+# Docker Compose:
+command:
+  - sh
+  - -c
+  - sleep 15 && npm start
+# LazyCat:
+command: sh -c 'sleep 15 && npm start'
+
+# Example 3: Complex startup script
+# Docker Compose:
+command:
+  - sh
+  - -c
+  - sleep 15 && bun run dist/scripts/runMigrations.js && bun run dist/server.js
+# LazyCat:
+command: sh -c 'sleep 15 && bun run dist/scripts/runMigrations.js && bun run dist/server.js'
+```
+
+**Important Notes:**
+1. **Use single quotes** when command contains shell operators (`&&`, `||`, `|`)
+2. **sleep command**: Use `sleep 15` (not `sleep 15s`) for BusyBox compatibility
+3. **No array format**: Will cause installation error if used
+
+**Error Example:**
+```yaml
+# ❌ This will fail with:
+# 'services[app].command' expected type 'string', got unconvertible type '[]interface {}'
+command:
+  - sh
+  - -c
+  - sleep 15 && npm start
+```
 
 ## Supported Docker Features
 

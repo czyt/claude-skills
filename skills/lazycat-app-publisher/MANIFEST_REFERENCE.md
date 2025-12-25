@@ -74,7 +74,89 @@ locales:
 
 ## 🎯 关键变更总结
 
-### 1. **lzc-sdk-version 字段**
+### 1. **command 字段格式**
+| 类型要求 | 说明 |
+|----------|------|
+| ✅ **必须是字符串** | LazyCat manifest 要求 command 必须是 string 类型 |
+| ❌ **不能是数组** | 即使 Docker Compose 支持数组格式，LazyCat 也不支持 |
+
+**错误示例（数组格式）：**
+```yaml
+# ❌ 错误 - LazyCat 不支持数组格式的 command
+services:
+  app:
+    command:
+      - sh
+      - -c
+      - sleep 15 && bun run server.js
+
+# 错误信息：
+# 'services[app].command' expected type 'string', got unconvertible type '[]interface {}'
+```
+
+**正确示例（字符串格式）：**
+```yaml
+# ✅ 正确 - 使用字符串格式
+services:
+  app:
+    command: sh -c 'sleep 15 && bun run server.js'
+
+# ✅ 正确 - 简单命令
+services:
+  redis:
+    command: redis-server --requirepass {{.INTERNAL.redis_password}}
+```
+
+**注意事项：**
+1. **引号使用**：
+   - 如果命令中包含 `&&`、`||`、管道等 shell 操作符，建议用单引号包裹
+   - 例如：`sh -c 'sleep 15 && node server.js'`
+
+2. **sleep 命令**：
+   - 某些镜像（如基于 BusyBox）不支持 `sleep 15s` 格式
+   - 应使用 `sleep 15`（数字默认单位为秒）
+
+3. **Docker Compose 兼容性**：
+   - Docker Compose 同时支持字符串和数组格式
+   - LazyCat 仅支持字符串格式
+   - 转换时需要将数组格式改为字符串
+
+**转换规则：**
+```yaml
+# Docker Compose（数组格式）→ LazyCat（字符串格式）
+
+# 示例 1：简单转换
+# Docker Compose:
+command:
+  - redis-server
+  - --requirepass
+  - mypassword
+# LazyCat:
+command: redis-server --requirepass mypassword
+
+# 示例 2：shell 命令转换
+# Docker Compose:
+command:
+  - sh
+  - -c
+  - sleep 15 && npm start
+# LazyCat:
+command: sh -c 'sleep 15 && npm start'
+
+# 示例 3：复杂命令转换
+# Docker Compose:
+command:
+  - /bin/bash
+  - -c
+  - |
+    sleep 10
+    npm run migrate
+    npm start
+# LazyCat:
+command: /bin/bash -c 'sleep 10 && npm run migrate && npm start'
+```
+
+### 2. **lzc-sdk-version 字段**
 | 状态 | 说明 |
 |------|------|
 | ❌ **已移除** | 最新项目不再使用 |
@@ -246,6 +328,8 @@ services:
 - [ ] 推荐使用 `upstreams` 代替 `routes`
 - [ ] 内部服务参数使用 `{{.INTERNAL.xxx}}`
 - [ ] 用户配置参数使用 `{{.U.xxx}}`
+- [ ] ⚠️ **`command` 字段必须是字符串**（不能是数组）
+- [ ] `sleep` 命令使用纯数字（如 `sleep 15`，不要 `sleep 15s`）
 
 ---
 
