@@ -32,6 +32,11 @@ preferences:
     description: Generate only README.md with essential info, skip other markdown files
     type: boolean
     default: true
+  - id: background_task
+    name: Background Task Mode
+    description: Set application.background_task to true by default for long-running background services
+    type: boolean
+    default: false
 ---
 
 # LazyCat App Publisher
@@ -700,11 +705,10 @@ services:
       - USER_SECRET={{.U.secret}}
 ```
 
-**9. Multi-instance** - Load balancing
+**9. Multi-instance** - Per-user container isolation
 ```yaml
-services:
-  app:
-    instances: 3  # Launch 3 instances
+application:
+  multi_instance: true  # Each user gets separate container
 ```
 
 **10. Platform Control** - Architecture support
@@ -923,6 +927,49 @@ app-directory/
 - Essential only
 
 **When to disable**: If you need comprehensive documentation for development or reference purposes.
+
+### Background Task Mode (default: false)
+
+**ID**: `background_task`
+
+When enabled, the skill automatically sets `application.background_task` to `true` in the generated manifest. This is useful for long-running background services that don't serve HTTP traffic.
+
+**What is background_task?**
+
+LazyCat's microservice system has an advanced **service scheduling mechanism**. When an application is inactive for a long time, the system automatically stops it to improve overall system responsiveness.
+
+For certain special applications (like downloaders, schedulers, or sync services) that need to run continuously in the background, you don't want the system to schedule based on activity. Setting `background_task: true` prevents the system from stopping these services.
+
+**Example Output** (when enabled):
+```yaml
+application:
+  subdomain: myapp
+  background_task: true  # Prevents auto-stop based on inactivity
+  upstreams:
+    - location: /
+      backend: http://myapp:8080/
+```
+
+**Example Output** (when disabled):
+```yaml
+application:
+  subdomain: myapp
+  upstreams:
+    - location: /
+      backend: http://myapp:8080/
+```
+
+**When to enable**:
+- Long-running downloaders (e.g., aria2, qBittorrent)
+- Background sync services (e.g., Yuque Sync, RSS sync)
+- Scheduled task runners (e.g., cron jobs)
+- Services that need 24/7 operation without HTTP traffic
+
+**When to disable** (default):
+- Normal web applications
+- HTTP API servers
+- Interactive applications
+- Applications where auto-stop on inactivity is acceptable
 
 **How to configure**: You can configure these preferences in your Claude Code settings under skill preferences.
 
@@ -1883,9 +1930,10 @@ lzc-cli appstore publish release.lpk
 - lzc-cli Reference: `/docs/lzc-cli.html`
 - Store Submission: `/docs/store-submission-guide.html`
 
-### Real-World Examples
-- Yuque Sync Project: `/home/czyt/code/lazycat/yuque-sync-lzcapp`
-- Complete automation script with 4-stage publish workflow
+### Official Specification Reference
+- **OFFICIAL_SPEC_REFERENCE.md** - Complete manifest, deploy-params, and build spec reference
+- Includes all official documentation content without local path dependencies
+- Portable across different devices
 
 ---
 

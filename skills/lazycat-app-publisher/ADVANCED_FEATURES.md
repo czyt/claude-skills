@@ -133,8 +133,8 @@ compose_override:
 
 **优势:**
 - 支持路径路由
-- 支持负载均衡
 - 更灵活的配置
+- 支持多种高级选项
 
 ```yaml
 application:
@@ -148,17 +148,18 @@ application:
       backend: http://static:80/
 ```
 
-**高级用法 - 负载均衡:**
+**高级选项示例:**
 ```yaml
 application:
   subdomain: myapp
   upstreams:
     - location: /
-      backend:
-        - http://app-1:8080/
-        - http://app-2:8080/
-        - http://app-3:8080/
-      algorithm: round_robin  # 或 least_conn, ip_hash
+      backend: http://myapp:8080/
+      use_backend_host: true  # 使用 backend 的 host
+      disable_backend_ssl_verify: true  # 不验证 SSL
+      remove_this_request_headers:  # 删除特定请求头
+        - Origin
+        - Referer
 ```
 
 ### 2.2 routes（传统方式）
@@ -206,6 +207,209 @@ application:
       port: 22
       service: gitlab
 ```
+
+### 2.5 APP Proxy - 高级路由解决方案
+
+**简介**
+
+官方维护了一个 **APP Proxy** 镜像，方便开发者实现复杂的路由功能，以及查看对应的请求日志。APP Proxy 本质是一个基于 OpenResty 的镜像。
+
+**镜像地址**: `registry.lazycat.cloud/app-proxy:v0.1.0`
+
+**使用场景:**
+- 需要查看详细的 HTTP 请求日志
+- 需要绕过 Basic Auth
+- 需要删除特定的 HTTP 请求头
+- 需要复杂的 Nginx/OpenResty 配置
+- 需要多域名支持和复杂路由规则
+
+**两种使用模式:**
+
+#### 模式 1: 环境变量配置（简单模式）
+
+适用于只有一个 HTTP 上游服务的情况。
+
+**支持的环境变量:**
+
+| 环境变量 | 作用 | 示例 |
+|---------|------|------|
+| `UPSTREAM` (必填) | 设置代理的上游 HTTP 服务 | `UPSTREAM=http://whoami:80` |
+| `BASIC_AUTH_HEADER` | 设置 Authorization header，绕过 Basic Auth | `BASIC_AUTH_HEADER="Basic dXNlcjpwYXNzd29yZA=="` |
+| `REMOVE_REQUEST_HEADERS` | 移除 HTTP 请求头，多个请求头以英文 `;` 分隔 | `REMOVE_REQUEST_HEADERS="Origin;Host;"` |
+
+**示例 1: 查看应用请求日志**
+
+```yaml
+name: APP Proxy Test
+package: cloud.lazycat.app.app-proxy-test
+version: 0.0.1
+application:
+  routes:
+    - /=http://app-proxy:80
+  subdomain: app-proxy-test
+services:
+  app-proxy:
+    image: registry.lazycat.cloud/app-proxy:v0.1.0
+    environment:
+      - UPSTREAM=http://whoami:80
+  whoami:
+    image: registry.lazycat.cloud/snyh1010/traefik/whoami:c899811bc4a1f63a
+```
+
+**查看日志:**
+```bash
+lzc-cli docker logs -f cloudlazycatappapp-proxy-test-app-proxy-1
+```
+
+**示例 2: 绕过 Basic Auth**
+
+通过设置 `BASIC_AUTH_HEADER` 环境变量，为请求注入 Authorization 请求头，实现免登录。
+
+```bash
+# 生成 Basic Auth header
+echo -n "user:password" | base64
+# 输出: dXNlcjpwYXNzd29yZA==
+```
+
+```yaml
+name: APP Proxy Test
+package: cloud.lazycat.app.app-proxy-test
+version: 0.0.1
+application:
+  routes:
+    - /=http://app-proxy:80
+  subdomain: app-proxy-test
+services:
+  app-proxy:
+    image: registry.lazycat.cloud/app-proxy:v0.1.0
+    environment:
+      - UPSTREAM=http://whoami:80
+      - BASIC_AUTH_HEADER=Basic dXNlcjpwYXNzd29yZA==
+  whoami:
+    image: registry.lazycat.cloud/snyh1010/traefik/whoami:c899811bc4a1f63a
+```
+
+**示例 3: 删除请求 Header**
+
+通过设置 `REMOVE_REQUEST_HEADERS` 环境变量，可以删除特定的请求头。
+
+```yaml
+name: APP Proxy Test
+package: cloud.lazycat.app.app-proxy-test
+version: 0.0.1
+application:
+  routes:
+    - /=http://app-proxy:80
+  subdomain: app-proxy-test
+services:
+  app-proxy:
+    image: registry.lazycat.cloud/app-proxy:v0.1.0
+    environment:
+      - UPSTREAM=http://whoami:80
+      - REMOVE_REQUEST_HEADERS=Origin;Cache-Control;
+  whoami:
+    image: registry.lazycat.cloud/snyh1010/traefik/whoami:c899811bc4a1f63a
+```
+
+#### 模式 2: setup_script 配置（高级模式）
+
+通过 `setup_script` 直接覆盖 OpenResty 的配置文件，可以使用任何 Nginx/OpenResty 支持的配置。
+
+**⚠️ 重要**: 禁止混合使用两种模式！
+
+**基础示例:**
+
+```yaml
+name: APP Proxy Test
+package: cloud.lazycat.app.app-proxy-test
+version: 0.0.1
+application:
+  routes:
+    - /=http://app-proxy:80
+  subdomain: app-proxy-test
+services:
+  app-proxy:
+    image: registry.lazycat.cloud/app-proxy:v0.1.0
+    setup_script: |
+      # 覆盖 OpenResty 的配置文件
+      cat <<'EOF' > /etc/nginx/conf.d/default.conf
+      # 任何 Nginx/OpenResty 支持的配置
+      server {
+         server_name  app-proxy-test.*;
+         location / {
+            root   /usr/local/openresty/nginx/html;
+            index  index.html index.htm;
+         }
+      }
+      EOF
+```
+
+**示例 4: 多域名支持**
+
+LazyCat 微服支持一个应用使用多个域名。结合 `setup_script` 和 `secondary_domains`，可以实现复杂的路由功能，将多个域名分别转发到应用的不同后端。
+
+```yaml
+name: APP Proxy Test
+package: cloud.lazycat.app.app-proxy-test
+version: 0.0.1
+application:
+  routes:
+    - /=http://app-proxy.cloud.lazycat.app.app-proxy-test.lzcapp:80
+  subdomain: app-proxy-test  # 应用列表里默认打开的域名
+  secondary_domains:
+    - portainer
+    - whoami
+services:
+  app-proxy:
+    image: registry.lazycat.cloud/app-proxy:v0.1.0
+    setup_script: |
+      cat <<'EOF' > /etc/nginx/conf.d/default.conf
+      # app-proxy-test.xxx.heiyu.space → OpenResty 默认首页
+      server {
+         server_name  app-proxy-test.*;
+         location / {
+            root   /usr/local/openresty/nginx/html;
+            index  index.html index.htm;
+         }
+      }
+
+      # portainer.xxx.heiyu.space → Portainer
+      server {
+         server_name  portainer.*;
+         location / {
+            proxy_pass http://portainer:9000;
+         }
+      }
+
+      # whoami.xxx.heiyu.space → whoami
+      server {
+         server_name  whoami.*;
+         location / {
+            proxy_pass http://whoami:80;
+         }
+      }
+      EOF
+  portainer:
+    image: registry.lazycat.cloud/u8997806945/portainer/portainer-ce:d393c0c7d12aae78
+  whoami:
+    image: registry.lazycat.cloud/snyh1010/traefik/whoami:c899811bc4a1f63a
+```
+
+**多域名访问:**
+- `app-proxy-test.xxx.heiyu.space` → OpenResty 默认首页
+- `portainer.xxx.heiyu.space` → Portainer
+- `whoami.xxx.heiyu.space` → whoami
+
+**APP Proxy 优势总结:**
+
+| 功能 | 传统路由 | APP Proxy |
+|------|---------|-----------|
+| 请求日志 | ❌ | ✅ 可查看详细日志 |
+| Basic Auth 绕过 | ❌ | ✅ 环境变量配置 |
+| 删除请求头 | ❌ | ✅ 环境变量配置 |
+| 多域名路由 | ❌ | ✅ setup_script 支持 |
+| 复杂 Nginx 配置 | ❌ | ✅ 完全自定义 |
+| Lua 脚本 | ❌ | ✅ OpenResty 支持 |
 
 ---
 
@@ -683,18 +887,35 @@ services:
 ```yaml
 # 单实例（默认）
 services:
-  app:
-    image: myapp:latest
-    instances: 1  # 可省略
+## 8.10 多实例应用
 
-# 多实例（负载均衡）
+**说明：** 多实例是指每个用户启动独立的应用容器实例，实现数据隔离。
+
+```yaml
+# 在 application 级别配置
+application:
+  multi_instance: true  # 启用多实例模式
+  subdomain: myapp
+
 services:
   app:
     image: myapp:latest
-    instances: 3  # 启动 3 个实例
     environment:
-      - INSTANCE_ID=${INSTANCE_ID}  # 每个实例唯一
+      - USER_ID=${LAZYCAT_APP_DEPLOY_UID}  # 每个用户实例唯一
 ```
+
+**特点：**
+- ✅ 每个用户独立容器
+- ✅ 数据天然隔离
+- ✅ 无需应用处理多用户权限
+- ⚠️ 占用更多内存资源
+
+**与单实例对比：**
+
+| 模式 | 容器数量 | 数据隔离 | 资源占用 |
+|------|---------|---------|---------|
+| 单实例 | 1个 | 应用自行处理 | 低 |
+| 多实例 | 每用户1个 | 系统级隔离 | 高 |
 
 ---
 

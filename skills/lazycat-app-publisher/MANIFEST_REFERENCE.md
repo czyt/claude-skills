@@ -454,3 +454,340 @@ services:
 - 用户必须配置的 → 使用 `{{.U.xxx}}`
 - 运行时信息 → 使用 `${LAZYCAT_*}`
 
+---
+
+# 附录：完整字段参考
+
+本节提供所有 manifest 配置字段的完整参考表。
+
+## A. ApplicationConfig 完整字段
+
+### A.1 基础配置字段
+
+| 字段名 | 类型 | 必需 | 描述 |
+|--------|------|------|------|
+| `image` | `string` | ❌ | 应用镜像，留空使用系统默认镜像 (alpine3.21) |
+| `background_task` | `bool` | ❌ | 若为 true 则会自动启动并且不会被自动休眠，默认为 true |
+| `subdomain` | `string` | ✅ | 本应用的入站子域名 |
+| `multi_instance` | `bool` | ❌ | 是否以多实例形式部署（每用户一个容器） |
+| `usb_accel` | `bool` | ❌ | 挂载 USB 设备到 `/dev/bus/usb` |
+| `gpu_accel` | `bool` | ❌ | 挂载 GPU 设备到 `/dev/dri` |
+| `kvm_accel` | `bool` | ❌ | 挂载 KVM 设备到 `/dev/kvm` 和 `/dev/vhost-net` |
+| `depends_on` | `[]string` | ❌ | 依赖的其他容器服务 |
+
+### A.2 路由与网络字段
+
+| 字段名 | 类型 | 必需 | 描述 |
+|--------|------|------|------|
+| `routes` | `[]string` | ❌ | 简化版 HTTP 路由规则 |
+| `upstreams` | `[]UpstreamConfig` | ❌ | 高级版 HTTP 路由规则（推荐） |
+| `ingress` | `[]IngressConfig` | ❌ | TCP/UDP 服务配置 |
+| `public_path` | `[]string` | ❌ | 独立鉴权的 HTTP 路径列表 |
+| `secondary_domains` | `[]string` | ❌ | 次级域名列表 (v1.3.9+) |
+
+### A.3 功能配置字段
+
+| 字段名 | 类型 | 必需 | 描述 |
+|--------|------|------|------|
+| `file_handler` | `FileHandlerConfig` | ❌ | 文件处理配置 |
+| `workdir` | `string` | ❌ | app 容器启动时的工作目录 |
+| `environment` | `[]string` | ❌ | app 容器的环境变量 |
+| `health_check` | `AppHealthCheckExt` | ❌ | app 容器的健康检测 |
+| `oidc_redirect_path` | `string` | ❌ | OIDC 回调路径 |
+
+---
+
+## B. UpstreamConfig 完整字段
+
+HTTP 路由的高级配置选项。
+
+| 字段名 | 类型 | 必需 | 版本 | 描述 |
+|--------|------|------|------|------|
+| `location` | `string` | ✅ | - | 入口匹配的路径 |
+| `backend` | `string` | ✅ | - | 上游地址，支持 http/https/file 协议 |
+| `domain_prefix` | `string` | ❌ | - | 入口匹配的域名前缀 |
+| `use_backend_host` | `bool` | ❌ | - | 使用 backend 中的 host 而非浏览器请求的 host |
+| `disable_trim_location` | `bool` | ❌ | v1.3.9+ | 转发时不自动去掉 location 前缀 |
+| `disable_backend_ssl_verify` | `bool` | ❌ | - | 请求 backend 时不进行 SSL 验证 |
+| `disable_auto_health_chekcing` | `bool` | ❌ | - | 禁止系统自动生成健康检测 |
+| `disable_url_raw_path` | `bool` | ❌ | - | 删除 HTTP header 中的 raw URL |
+| `remove_this_request_headers` | `[]string` | ❌ | - | 删除指定的 HTTP request headers |
+| `fix_websocket_header` | `bool` | ❌ | - | 自动修正 WebSocket header 大小写 |
+| `backend_launch_command` | `string` | ❌ | - | 自动启动此字段里的程序 |
+| `trim_url_suffix` | `string` | ❌ | - | 自动删除 URL 后缀字符 |
+| `dump_http_headers_when_5xx` | `bool` | ❌ | - | HTTP 5xx 时 dump 请求 |
+| `dump_http_headers_when_paths` | `[]string` | ❌ | - | 指定路径下 dump 请求 |
+
+**示例：**
+
+```yaml
+application:
+  upstreams:
+    - location: /api
+      backend: https://external-api.com/
+      use_backend_host: true
+      disable_backend_ssl_verify: true
+      remove_this_request_headers:
+        - Origin
+        - Referer
+      fix_websocket_header: true
+```
+
+---
+
+## C. IngressConfig 完整字段
+
+TCP/UDP 端口转发配置。
+
+| 字段名 | 类型 | 必需 | 描述 |
+|--------|------|------|------|
+| `protocol` | `string` | ✅ | 协议类型：tcp 或 udp |
+| `port` | `int` | ✅ | 目标端口号 |
+| `service` | `string` | ❌ | 服务容器名称，默认为 app |
+| `description` | `string` | ❌ | 服务描述 |
+| `publish_port` | `string` | ❌ | 允许的入站端口或端口范围 |
+| `send_port_info` | `bool` | ❌ | 发送实际端口信息 |
+| `yes_i_want_80_443` | `bool` | ❌ | 允许 80/443 端口（绕过鉴权，慎用！） |
+
+**示例：**
+
+```yaml
+application:
+  ingress:
+    - protocol: tcp
+      port: 22
+      service: gitlab
+      description: "SSH for Git"
+      publish_port: "20000-30000"
+```
+
+---
+
+## D. ServiceConfig 完整字段
+
+### D.1 容器配置字段
+
+| 字段名 | 类型 | 必需 | 描述 |
+|--------|------|------|------|
+| `image` | `string` | ✅ | Docker 镜像 |
+| `environment` | `[]string` | ❌ | 环境变量 |
+| `entrypoint` | `*string` | ❌ | 容器 entrypoint |
+| `command` | `*string` | ❌ | 容器 command（**必须是字符串**） |
+| `user` | `*string` | ❌ | 运行用户 UID 或 username |
+| `binds` | `[]string` | ❌ | 卷挂载，仅支持 /lzcapp 开头路径 |
+| `tmpfs` | `[]string` | ❌ | tmpfs 挂载 |
+| `depends_on` | `[]string` | ❌ | 依赖的其他服务 |
+| `healthcheck` | `*HealthCheckConfig` | ❌ | 健康检测配置 (v1.4.1+) |
+
+### D.2 资源限制字段
+
+| 字段名 | 类型 | 必需 | 描述 |
+|--------|------|------|------|
+| `cpu_shares` | `int64` | ❌ | CPU 份额（1024 = 100%） |
+| `cpus` | `float32` | ❌ | CPU 核心数 |
+| `mem_limit` | `string\|int` | ❌ | 内存上限（如 512M, 2G） |
+| `shm_size` | `string\|int` | ❌ | /dev/shm/ 大小 |
+
+### D.3 网络与权限字段
+
+| 字段名 | 类型 | 必需 | 描述 |
+|--------|------|------|------|
+| `network_mode` | `string` | ❌ | 网络模式，仅支持 host 或留空 |
+| `netadmin` | `bool` | ❌ | 是否具备 NET_ADMIN 权限 |
+| `runtime` | `string` | ❌ | OCI runtime：runc 或 sysbox-runc |
+| `setup_script` | `*string` | ❌ | 初始化脚本（与 entrypoint/command 冲突） |
+
+**示例：**
+
+```yaml
+services:
+  postgres:
+    image: postgres:15
+    environment:
+      - POSTGRES_PASSWORD={{.INTERNAL.db_password}}
+    user: "999"
+    cpu_shares: 512
+    mem_limit: 1024M
+    shm_size: 256M
+    binds:
+      - /lzcapp/var/db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready"]
+      interval: 30s
+      start_period: 30s
+```
+
+---
+
+## E. ExtConfig 完整字段
+
+扩展配置选项。
+
+| 字段名 | 类型 | 必需 | 描述 |
+|--------|------|------|------|
+| `enable_document_access` | `bool` | ❌ | 将 document 目录挂载到 /lzcapp/run/mnt/home |
+| `enable_media_access` | `bool` | ❌ | 将 media 目录挂载到 /lzcapp/run/mnt/media |
+| `disable_grpc_web_on_root` | `bool` | ❌ | 不劫持应用的 grpc-web 流量 |
+| `default_prefix_domain` | `string` | ❌ | 调整启动器打开的默认域名前缀 |
+
+**示例：**
+
+```yaml
+ext_config:
+  enable_document_access: true
+  enable_media_access: true
+  default_prefix_domain: "admin"
+```
+
+---
+
+## F. HealthCheckConfig 完整字段
+
+### F.1 Service 级别 (healthcheck)
+
+| 字段名 | 类型 | 必需 | 描述 |
+|--------|------|------|------|
+| `test` | `[]string` | ✅ | 检测命令 |
+| `timeout` | `string` | ❌ | 单次检测超时时间 |
+| `interval` | `string` | ❌ | 检测间隔 |
+| `retries` | `int` | ❌ | 连续失败次数，默认 1 |
+| `start_period` | `string` | ❌ | 启动等待时间 |
+| `start_interval` | `string` | ❌ | start_period 内的检测间隔 |
+| `disable` | `bool` | ❌ | 禁用健康检测 |
+
+### F.2 Application 级别 (health_check)
+
+| 字段名 | 类型 | 必需 | 描述 |
+|--------|------|------|------|
+| `test_url` | `string` | ❌ | HTTP URL 检测（仅 application 支持） |
+| `timeout` | `string` | ❌ | 单次检测超时 (v1.4.1+) |
+| `start_period` | `string` | ❌ | 启动等待时间 |
+| `disable` | `bool` | ❌ | 禁用健康检测 |
+
+---
+
+## G. FileHandlerConfig 完整字段
+
+文件处理配置。
+
+| 字段名 | 类型 | 必需 | 描述 |
+|--------|------|------|------|
+| `mime` | `[]string` | ✅ | 支持的 MIME 类型列表 |
+| `actions` | `map[string]string` | ✅ | 动作映射 |
+
+**MIME 类型支持：**
+- 具体类型：`application/pdf`
+- 通配符：`text/*`, `*/*`
+- 扩展名：`x-lzc-extension/md`
+
+**示例：**
+
+```yaml
+application:
+  file_handler:
+    mime:
+      - application/pdf
+      - text/*
+      - x-lzc-extension/md
+    actions:
+      open: /open?file=%u
+      download: /download?file=%u
+```
+
+---
+
+## H. 顶层字段
+
+### H.1 基本信息字段
+
+| 字段名 | 类型 | 必需 | 描述 |
+|--------|------|------|------|
+| `package` | `string` | ✅ | 应用唯一 ID，建议以域名开头 |
+| `version` | `string` | ✅ | 版本号，格式 X.Y.Z (semver) |
+| `name` | `string` | ✅ | 应用名称 |
+| `description` | `string` | ✅ | 应用描述 |
+| `min_os_version` | `string` | ✅ | 最低系统版本，推荐 1.3.8 |
+| `license` | `string` | ❌ | License 说明 |
+| `homepage` | `string` | ❌ | 应用主页 |
+| `author` | `string` | ❌ | 作者名称 |
+| `usage` | `string` | ❌ | 使用须知 |
+
+### H.2 其他顶层字段
+
+| 字段名 | 类型 | 必需 | 描述 |
+|--------|------|------|------|
+| `ext_config` | `ExtConfig` | ❌ | 扩展配置 |
+| `unsupported_platforms` | `[]string` | ❌ | 不支持的平台列表 |
+| `application` | `ApplicationConfig` | ✅ | 应用配置 |
+| `services` | `map[string]ServiceConfig` | ✅ | 服务配置 |
+| `locales` | `map[string]I10nConfigItem` | ❌ | 多语言配置 |
+
+---
+
+## I. 本地化字段
+
+| 字段名 | 类型 | 必需 | 描述 |
+|--------|------|------|------|
+| `name` | `string` | ✅ | 应用名称本地化 |
+| `description` | `string` | ✅ | 应用描述本地化 |
+| `usage` | `string` | ❌ | 使用须知本地化 |
+
+**语言代码遵循 BCP 47 标准**：zh, zh_CN, en, ja, ko 等
+
+**示例：**
+
+```yaml
+locales:
+  zh:
+    name: "我的应用"
+    description: "这是一个示例应用"
+  en:
+    name: "My App"
+    description: "This is a sample application"
+```
+
+---
+
+## J. 保留名称
+
+以下服务名称为系统保留，不能使用：
+
+- ❌ `app` - 系统保留服务名
+
+**解决方案：** 使用 `web`, `backend`, `myapp`, `app-service` 等替代。
+
+---
+
+## K. 快速参考速查表
+
+### 常用路径
+
+| 路径 | 用途 | 持久化 |
+|------|------|--------|
+| `/lzcapp/var` | 永久数据 | ✅ 是 |
+| `/lzcapp/cache` | 缓存数据 | ✅ 是 |
+| `/lzcapp/pkg` | 包内容 | ❌ 只读 |
+| `/lzcapp/run` | 运行时数据 | ❌ 否 |
+
+### 常用环境变量
+
+| 变量 | 描述 |
+|------|------|
+| `${LAZYCAT_APP_ID}` | 应用 ID |
+| `${LAZYCAT_SUBDOMAIN}` | 子域名 |
+| `${LAZYCAT_BOX_DOMAIN}` | 盒子域名 |
+| `${LAZYCAT_PUBLIC_URL}` | 完整 URL |
+| `${LAZYCAT_APP_DEPLOY_UID}` | 用户 ID（多实例） |
+
+### 模板函数
+
+| 函数 | 用途 |
+|------|------|
+| `{{.INTERNAL.xxx}}` | 内部服务密码 |
+| `{{.U.xxx}}` | 用户配置参数 |
+| `{{ stable_secret "seed"}}` | 稳定密钥生成 |
+
+---
+
+**文档版本：** v1.4.1+  
+**最后更新：** 2025-12-26
