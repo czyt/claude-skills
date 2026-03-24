@@ -2,6 +2,8 @@
 
 This file contains common Docker Compose patterns and their LazyCat equivalents.
 
+> Note: the `package.yml` examples in this file target `LPK v2` on `lzcos v1.5.0+` with `lzc-cli v2.0.0+`. For legacy `LPK v1` targets, static metadata can remain at the top level of `lzc-manifest.yml`.
+
 ## 1. Simple Web Application
 
 ### Docker Compose
@@ -20,14 +22,16 @@ services:
 
 ### LazyCat Files
 
-**lzc-manifest.yml:**
+**package.yml:**
 ```yaml
-lzc-sdk-version: '0.1'
-name: Nginx Web
 package: cloud.lazycat.app.nginx-web
 version: 1.0.0
+name: Nginx Web
 description: "Simple Nginx web server"
+```
 
+**lzc-manifest.yml:**
+```yaml
 application:
   subdomain: nginxweb
   routes:
@@ -88,14 +92,16 @@ volumes:
 
 ### LazyCat Files
 
-**lzc-manifest.yml:**
+**package.yml:**
 ```yaml
-lzc-sdk-version: '0.1'
-name: WordPress
 package: cloud.lazycat.app.wordpress
 version: 1.0.0
+name: WordPress
 description: "WordPress with MySQL database"
+```
 
+**lzc-manifest.yml:**
+```yaml
 application:
   subdomain: wordpress
   routes:
@@ -162,14 +168,16 @@ services:
 
 ### LazyCat Files
 
-**lzc-manifest.yml:**
+**package.yml:**
 ```yaml
-lzc-sdk-version: '0.1'
-name: GitLab CE
 package: cloud.lazycat.app.gitlab-ce
 version: 1.0.0
+name: GitLab CE
 description: "GitLab Community Edition"
+```
 
+**lzc-manifest.yml:**
+```yaml
 application:
   subdomain: gitlab
   routes:
@@ -235,14 +243,16 @@ volumes:
 
 ### LazyCat Files
 
-**lzc-manifest.yml:**
+**package.yml:**
 ```yaml
-lzc-sdk-version: '0.1'
-name: Node.js App
 package: cloud.lazycat.app.nodejs-app
 version: 1.0.0
+name: Node.js App
 description: "Node.js application with Redis cache"
+```
 
+**lzc-manifest.yml:**
+```yaml
 application:
   subdomain: nodejsapp
   routes:
@@ -301,14 +311,16 @@ volumes:
 
 ### LazyCat Files
 
-**lzc-manifest.yml:**
+**package.yml:**
 ```yaml
-lzc-sdk-version: '0.1'
-name: Portainer
 package: cloud.lazycat.app.portainer
 version: 1.0.0
+name: Portainer
 description: "Portainer Container Management"
+```
 
+**lzc-manifest.yml:**
+```yaml
 application:
   subdomain: portainer
   routes:
@@ -354,14 +366,16 @@ volumes:
 
 ### LazyCat Files
 
-**lzc-manifest.yml:**
+**package.yml:**
 ```yaml
-lzc-sdk-version: '0.1'
-name: MongoDB
 package: cloud.lazycat.app.mongodb
 version: 1.0.0
+name: MongoDB
 description: "MongoDB Database"
+```
 
+**lzc-manifest.yml:**
+```yaml
 application:
   subdomain: mongodb
   ingress:
@@ -428,14 +442,16 @@ volumes:
 
 ### LazyCat Files
 
-**lzc-manifest.yml:**
+**package.yml:**
 ```yaml
-lzc-sdk-version: '0.1'
-name: Nextcloud
 package: cloud.lazycat.app.nextcloud
 version: 1.0.0
+name: Nextcloud
 description: "Nextcloud File Hosting"
+```
 
+**lzc-manifest.yml:**
+```yaml
 application:
   subdomain: nextcloud
   routes:

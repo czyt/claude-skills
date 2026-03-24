@@ -270,16 +270,20 @@ fi
 /lzcapp/pkg/content/chfs --file=/config/chfs.ini
 ```
 
-`manifest.yml`文件
+`package.yml` 文件（适用于 `lzcos v1.5.0+` / `LPK v2`）
 
 ```yaml
-lzc-sdk-version: "0.1"
-name: CuteHttpFileServer
 package: cloud.lazycat.app.chfs
 version: 4.0.0
+name: CuteHttpFileServer
 description: 一个免费的、HTTP协议的文件共享服务器，使用浏览器可以快速访问.
 homepage: http://iscute.cn/chfs
 author: iscute
+```
+
+`lzc-manifest.yml`文件
+
+```yaml
 application:
   subdomain: chfs
   background_task: true
@@ -352,20 +356,23 @@ locales:
 
 ```
 
-manifest.yml
+package.yml（适用于 `lzcos v1.5.0+` / `LPK v2`）
 
 ```yaml
 package: org.snyh.netmap
-
 version: 0.0.1
-
-{{ if .U.target }}
-name: to {{.U.target}}
-{{ else }}
 name: netmap
-{{ end }}
-
 min_os_version: 1.3.8
+```
+
+`lzc-manifest.yml`
+
+```yaml
+{{ if .U.target }}
+usage: "to {{.U.target}}"
+{{ else }}
+usage: "netmap"
+{{ end }}
 
 application:
   subdomain: netmap
@@ -396,14 +403,21 @@ ext_config:
 下面是一个例子
 
 ```yaml
-lzc-sdk-version: "0.1"
-name: MTranServer
+# package.yml（适用于 `lzcos v1.5.0+` / `LPK v2`）
 package: cloud.lazycat.app.mtranserver
 version: 1.1.1
+name: MTranServer
 description: 一个超低资源消耗超快的离线翻译服务器
 homepage: https://github.com/xxnuo/MTranServer
-usage: "请在浏览器打开应用，通过程序域名+/help获取使用帮助"
 author: xxnuo
+unsupported_platforms:
+  - ios
+  - android
+```
+
+```yaml
+# lzc-manifest.yml
+usage: "请在浏览器打开应用，通过程序域名+/help获取使用帮助"
 application:
   subdomain: mtranserver
   background_task: true
@@ -437,9 +451,6 @@ services:
       if [ ! -d /app/models/zhen ];then
         cp -r /lzcapp/pkg/content/models/zhen /app/models/
       fi
-unsupported_platforms:
-  - ios
-  - android
 ```
 
 > 路由这里的 `- /=http://mtranserver.cloud.lazycat.app.mtranserver.lzcapp:8989/`
@@ -579,7 +590,7 @@ unsupported_platforms:
       - POSTGRES_DB=cashbook
     binds:
       - /lzcapp/var/db:/var/lib/postgresql/data
-    health_check:
+    healthcheck:
       test:
         - CMD-SHELL
         - pg_isready -U postgres
@@ -599,7 +610,7 @@ unsupported_platforms:
       - MYSQL_PASSWORD=pastefy
     binds:
       - /lzcapp/var/db:/var/lib/mysql
-    health_check:
+    healthcheck:
       test:
         - CMD-SHELL
         - healthcheck.sh --connect --innodb_initialized
@@ -615,13 +626,17 @@ unsupported_platforms:
    简单来讲就是创建一个目录，然后把env模板从程序content目录拷贝过去并创建env文件的软连接。如果程序不支持自动读取env，则需要source env 文件。下面是一个例子：
 
 ```yaml
-lzc-sdk-version: "0.1"
-name: ImageFlow
+# package.yml（适用于 `lzcos v1.5.0+` / `LPK v2`）
 package: cloud.lazycat.app.imageflow
 version: 1.3.0
+name: ImageFlow
 description: 高效智能的图像管理和分发系统
 homepage: https://github.com/Yuri-NagaSaki/ImageFlow
 author: Yuri-NagaSaki
+```
+
+```yaml
+# lzc-manifest.yml
 application:
   subdomain: image-flow
   background_task: true

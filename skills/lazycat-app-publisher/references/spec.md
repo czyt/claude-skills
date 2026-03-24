@@ -9,9 +9,10 @@
 ## 📋 目录
 
 1. [Manifest 规范 (lzc-manifest.yml)](#manifest-规范)
-2. [部署参数规范 (lzc-deploy-params.yml)](#部署参数规范)
-3. [构建配置规范 (lzc-build.yml)](#构建配置规范)
-4. [高级功能参考](#高级功能参考)
+2. [Package 规范 (package.yml)](#package-规范)
+3. [部署参数规范 (lzc-deploy-params.yml)](#部署参数规范)
+4. [构建配置规范 (lzc-build.yml)](#构建配置规范)
+5. [高级功能参考](#高级功能参考)
 
 ---
 
@@ -19,7 +20,13 @@
 
 ## 一、概述
 
-`lzc-manifest.yml` 是用于定义应用部署相关配置的文件。本文档详细描述其结构和各字段的含义。
+`lzc-manifest.yml` 是用于定义应用运行结构与部署相关配置的文件。本文档详细描述其结构和各字段的含义。
+
+说明：
+
+1. `LPK v2` / `package.yml` 新流程以 `lzcos v1.5.0+` 为前提，构建需配合 `lzc-cli v2.0.0+`。
+2. 自 `LPK v2` 起，静态包元数据统一放入 `package.yml`，包括 `package`、`version`、`name`、`description`、`locales`、`author`、`license`、`homepage`、`min_os_version`、`unsupported_platforms` 与 `admin_only`。
+3. `LPK v1` 仍兼容旧布局，允许这些静态字段继续保留在 `lzc-manifest.yml` 顶层。
 
 ## 二、顶层数据结构 `ManifestConfig`
 
@@ -27,25 +34,15 @@
 
 | 字段名 | 类型 | 描述 |
 | ---- | ---- | ---- |
-| `package` | `string` | 应用的唯一 id，需保持全球唯一，建议以个人域名开头 |
-| `version` | `string` | 应用的版本号，格式：`X.Y.Z` (遵循 semver 规范) |
-| `name` | `string` | 应用名称 |
-| `description` | `string` | 应用描述 |
 | `usage` | `string` | 应用的使用须知，如果不为空，则微服内每个用户第一次访问本应用时会自动渲染 |
-| `license` | `string` | 应用的 License 说明 |
-| `homepage` | `string` | 应用的主页 |
-| `author` | `string` | 作者名称，若通过商店渠道则商店账号优先级更高 |
-| `min_os_version` | `string` | 本应用要求的最低系统版本，若不满足则应用安装时会失败 |
 
 ### 2.2 其他配置
 
 | 字段名 | 类型 | 描述 |
 | ---- | ---- | ---- |
 | `ext_config` | `ExtConfig` | 扩展配置 |
-| `unsupported_platforms` | `[]string` | 应用不支持的平台：ios, android, windows, macos, linux, tvos |
 | `application` | `ApplicationConfig` | lzcapp 核心服务配置 |
 | `services` | `map[string]ServiceConfig` | Docker container 相关服务配置 |
-| `locales` | `map[string]I10nConfigItem` | 应用本地化配置 (lzc-os >= v1.3.0) |
 
 ---
 
@@ -102,7 +99,7 @@ application:
 | `file_handler` | `FileHandlerConfig` | 声明本应用支持的扩展名 |
 | `routes` | `[]string` | 简化版 HTTP 路由规则 |
 | `upstreams` | `[]UpstreamConfig` | 高级版本 HTTP 路由规则，与 routes 共存 |
-| `public_path` | `[]string` | 独立鉴权的 HTTP 路径列表 |
+| `public_path` | `[]string` | 独立鉴权的 HTTP 路径列表；若 `package.yml.admin_only: true`，则不能同时声明非空值 |
 | `workdir` | `string` | `app` 容器启动时的工作目录 |
 | `ingress` | `[]IngressConfig` | TCP/UDP 服务相关 |
 | `environment` | `[]string` | `app` 容器的环境变量 |
@@ -145,8 +142,8 @@ application:
 
 | 字段名 | 类型 | 描述 |
 | ---- | ---- | ---- |
-| `enable_document_access` | `bool` | 如果为 true 则将 document 目录挂载到 /lzcapp/run/mnt/home |
-| `enable_media_access` | `bool` | 如果为 true 则将 media 目录挂载到 /lzcapp/run/mnt/media |
+| `enable_document_access` | `bool` | 如果为 true 则挂载用户文稿目录到 `/lzcapp/documents` |
+| `enable_media_access` | `bool` | 如果为 true 则将 media 目录挂载到 `/lzcapp/media` |
 | `disable_grpc_web_on_root` | `bool` | 如果为 true 则不再劫持应用的 grpc-web 流量 |
 | `default_prefix_domain` | `string` | 会调整启动器中点击应用后打开的最终域名，可以写任何不含 `.` 的字符串 |
 
@@ -158,7 +155,7 @@ application:
 
 | 字段名 | 类型 | 描述 |
 | ---- | ---- | ---- |
-| `image` | `string` | 对应容器的 Docker 镜像 |
+| `image` | `string` | 对应容器的 Docker 镜像，支持合法镜像引用，也支持 `embed:<alias>`（alias 由 `lzc-build.yml.images` 定义） |
 | `environment` | `[]string` | 对应容器的环境变量 |
 | `entrypoint` | `*string` | 对应容器的 entrypoint (可选) |
 | `command` | `*string` | 对应容器的 command (可选，**必须是字符串类型**) |
@@ -273,6 +270,53 @@ locales:
 
 ---
 
+# Package 规范
+
+## package.yml 规范
+
+`package.yml` 用于定义 LPK 的静态包元数据。
+
+**前提：**
+
+- `lzcos v1.5.0+`
+- `LPK v2`
+- `lzc-cli v2.0.0+`
+
+### 字段说明
+
+| 字段名 | 类型 | 描述 |
+|--------|------|------|
+| `package` | `string` | 必填；应用唯一包 ID |
+| `version` | `string` | 必填；应用版本 |
+| `name` | `string` | 可选；应用名称 |
+| `description` | `string` | 可选；应用描述 |
+| `author` | `string` | 可选；作者或维护者 |
+| `license` | `string` | 可选；许可证标识或链接 |
+| `homepage` | `string` | 可选；主页或反馈地址 |
+| `admin_only` | `bool` | 可选；是否仅管理员可见。若为 `true`，则不允许同时声明非空 `application.public_path` |
+| `min_os_version` | `string` | 可选；要求的最低系统版本 |
+| `unsupported_platforms` | `[]string` | 可选；不支持的平台列表 |
+| `locales` | `map[string]PackageLocaleConfig` | 可选；多语言元数据 |
+
+**示例：**
+
+```yaml
+package: cloud.lazycat.app.demo-app
+version: 0.0.1
+name: Demo App
+description: Demo application
+author: Demo Team
+license: MIT
+homepage: https://example.com
+min_os_version: 1.3.8
+locales:
+  zh-CN:
+    name: "示例应用"
+    description: "示例应用描述"
+```
+
+---
+
 # 部署参数规范
 
 ## lzc-deploy-params.yml 规范
@@ -358,7 +402,11 @@ locales:
 | `manifest` | `string` | 指定 manifest.yml 文件路径（必需） |
 | `pkgout` | `string` | lpk 包的输出路径（必需） |
 | `icon` | `string` | 应用图标路径，必须是 512x512 PNG 格式（必需） |
-| `contentdir` | `string` | 额外内容目录（可选） |
+| `contentdir` | `string` | 额外内容目录（可选）；未配置或显式空值时不会生成内容归档 |
+| `pkg_id` | `string` | 可选；`LPK v2` 下覆盖最终 `package.yml.package` 的值 |
+| `pkg_name` | `string` | 可选；`LPK v2` 下覆盖最终 `package.yml.name` 的值 |
+| `envs` | `[]string` | 可选；构建期变量列表，支持 `KEY=VALUE` 字符串数组 |
+| `images` | `map[string]ImageBuildConfig` | 可选；`LPK v2` 下用于产出 `embed:<alias>` 镜像引用 |
 | `compose_override` | `map` | 覆盖不支持的 Docker Compose 参数（可选） |
 
 **示例：**
@@ -368,6 +416,7 @@ locales:
 manifest: ./lzc-manifest.yml
 pkgout: ./
 icon: ./icon.png
+pkg_id: cloud.lazycat.app.demo-app.dev
 
 # 可选：覆盖不支持的参数
 compose_override:

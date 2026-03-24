@@ -1,5 +1,7 @@
 # LazyCat 应用发布 - 快速参考指南
 
+> 注：本文中 `package.yml` / `pkg_id` / `pkg_name` 相关内容以 `lzcos v1.5.0+`、`LPK v2`、`lzc-cli v2.0.0+` 为前提。
+
 ## 🎯 核心要点（v1.4.1+）
 
 ### 1. 完整 lzc-build.yml 示例
@@ -14,6 +16,10 @@ pkgout: ./
 # icon: 指定 lpk 包 icon 的路径（必须是 PNG 格式）
 icon: ./icon.png
 
+# pkg_id/pkg_name: 可选，覆盖 package.yml 中的 package/name
+# pkg_id: cloud.lazycat.app.myapp.dev
+# pkg_name: MyApp Dev
+
 # contentdir: 可选，额外内容目录
 # contentdir: ./dist
 
@@ -26,14 +32,16 @@ compose_override:
 - ✅ **manifest** (必需): 指向 lzc-manifest.yml
 - ✅ **pkgout** (必需): 输出目录
 - ✅ **icon** (必需): 512x512 PNG 图标
+- ✅ **pkg_id / pkg_name** (可选): 构建时覆盖 `package.yml`
 - ✅ **compose_override** (可选): 覆盖不支持参数
 
-### 2. Manifest 格式关键变更
+### 2. Package + Manifest 结构关键变更
 
 | 项目 | 旧格式 | 新格式 | 状态 |
 |------|--------|--------|------|
 | `lzc-sdk-version` | ✅ 存在 | ❌ 移除 | 必须删除 |
-| `min_os_version` | ❌ 无 | ✅ `1.3.8` | 必须添加 |
+| 静态元数据位置 | `lzc-manifest.yml` 顶层 | `package.yml` | ✅ `LPK v2` 推荐 |
+| `min_os_version` | manifest 顶层 | `package.yml` | ✅ `LPK v2` 应迁移 |
 | `services.healthcheck` | `health_check` | `healthcheck` | ✅ 新标准 |
 | `services.healthcheck.timeout` | ❌ 不支持 | ✅ 支持 | v1.4.1 新增 |
 | `application.upstreams` | `routes` | `upstreams` | ⭐ 推荐使用 |
@@ -67,16 +75,20 @@ services:
       timeout: 10s
 ```
 
-### 3. 完整 Manifest 示例
+### 3. 完整 Package + Manifest 示例（`LPK v2`）
 
 ```yaml
-# ✅ 正确格式
-name: MyApp
+# package.yml
 package: cloud.lazycat.app.myapp
 version: 1.0.0
-min_os_version: 1.3.8  # ✅ 必须
+name: MyApp
 description: "My application"
 license: MIT
+min_os_version: 1.3.8
+```
+
+```yaml
+# lzc-manifest.yml
 
 application:
   subdomain: myapp

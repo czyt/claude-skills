@@ -2,6 +2,8 @@
 
 This file contains common Docker run command patterns and their LazyCat equivalents.
 
+> Note: the `package.yml` examples in this file target `LPK v2` on `lzcos v1.5.0+` with `lzc-cli v2.0.0+`. For legacy `LPK v1` targets, static metadata can remain at the top level of `lzc-manifest.yml`.
+
 ## 1. Simple Web Server
 
 ### Docker Run Command
@@ -16,14 +18,16 @@ docker run -d \
 
 ### LazyCat Files
 
-**lzc-manifest.yml:**
+**package.yml:**
 ```yaml
-lzc-sdk-version: '0.1'
-name: Web Server
 package: cloud.lazycat.app.webserver
 version: 1.0.0
+name: Web Server
 description: "Nginx web server from docker run"
+```
 
+**lzc-manifest.yml:**
+```yaml
 application:
   subdomain: webserver
   routes:
@@ -63,14 +67,16 @@ docker run -d \
 
 ### LazyCat Files
 
-**lzc-manifest.yml:**
+**package.yml:**
 ```yaml
-lzc-sdk-version: '0.1'
-name: My Node App
 package: cloud.lazycat.app.myapp
 version: 1.0.0
+name: My Node App
 description: "Node.js application from docker run"
+```
 
+**lzc-manifest.yml:**
+```yaml
 application:
   subdomain: myapp
   routes:
@@ -114,14 +120,16 @@ docker run -d \
 
 ### LazyCat Files
 
-**lzc-manifest.yml:**
+**package.yml:**
 ```yaml
-lzc-sdk-version: '0.1'
-name: PostgreSQL
 package: cloud.lazycat.app.postgres
 version: 1.0.0
+name: PostgreSQL
 description: "PostgreSQL database from docker run"
+```
 
+**lzc-manifest.yml:**
+```yaml
 application:
   subdomain: postgres
   ingress:
@@ -166,14 +174,16 @@ docker run -d \
 
 ### LazyCat Files
 
-**lzc-manifest.yml:**
+**package.yml:**
 ```yaml
-lzc-sdk-version: '0.1'
-name: Redis Cache
 package: cloud.lazycat.app.redis
 version: 1.0.0
+name: Redis Cache
 description: "Redis cache from docker run"
+```
 
+**lzc-manifest.yml:**
+```yaml
 application:
   subdomain: redis
   ingress:
@@ -233,14 +243,16 @@ docker run -d \
 
 ### LazyCat Files
 
-**lzc-manifest.yml:**
+**package.yml:**
 ```yaml
-lzc-sdk-version: '0.1'
-name: WordPress Stack
 package: cloud.lazycat.app.wordpress-stack
 version: 1.0.0
+name: WordPress Stack
 description: "WordPress with MySQL from docker run"
+```
 
+**lzc-manifest.yml:**
+```yaml
 application:
   subdomain: wordpress
   routes:
@@ -301,14 +313,16 @@ docker run -d \
 
 ### LazyCat Files
 
-**lzc-manifest.yml:**
+**package.yml:**
 ```yaml
-lzc-sdk-version: '0.1'
-name: GitLab CE
 package: cloud.lazycat.app.gitlab-ce
 version: 1.0.0
+name: GitLab CE
 description: "GitLab CE from docker run"
+```
 
+**lzc-manifest.yml:**
+```yaml
 application:
   subdomain: gitlab
   routes:
@@ -356,14 +370,16 @@ docker run -d \
 
 ### LazyCat Files
 
-**lzc-manifest.yml:**
+**package.yml:**
 ```yaml
-lzc-sdk-version: '0.1'
-name: Jenkins
 package: cloud.lazycat.app.jenkins
 version: 1.0.0
+name: Jenkins
 description: "Jenkins CI/CD from docker run"
+```
 
+**lzc-manifest.yml:**
+```yaml
 application:
   subdomain: jenkins
   routes:
@@ -402,14 +418,16 @@ docker run -d \
 
 ### LazyCat Files
 
-**lzc-manifest.yml:**
+**package.yml:**
 ```yaml
-lzc-sdk-version: '0.1'
-name: MinIO
 package: cloud.lazycat.app.minio
 version: 1.0.0
+name: MinIO
 description: "MinIO object storage from docker run"
+```
 
+**lzc-manifest.yml:**
+```yaml
 application:
   subdomain: minio
   routes:
@@ -452,14 +470,16 @@ docker run -d \
 
 ### LazyCat Files
 
-**lzc-manifest.yml:**
+**package.yml:**
 ```yaml
-lzc-sdk-version: '0.1'
-name: Nginx Proxy Manager
 package: cloud.lazycat.app.npm
 version: 1.0.0
+name: Nginx Proxy Manager
 description: "Nginx Proxy Manager from docker run"
+```
 
+**lzc-manifest.yml:**
+```yaml
 application:
   subdomain: npm
   routes:
@@ -499,14 +519,16 @@ docker run -d \
 
 ### LazyCat Files
 
-**lzc-manifest.yml:**
+**package.yml:**
 ```yaml
-lzc-sdk-version: '0.1'
-name: Portainer
 package: cloud.lazycat.app.portainer
 version: 1.0.0
+name: Portainer
 description: "Portainer from docker run"
+```
 
+**lzc-manifest.yml:**
+```yaml
 application:
   subdomain: portainer
   routes:

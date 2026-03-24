@@ -158,6 +158,17 @@ def classify_service(service_config):
 - 不要生成 `type: number`
 - 需要约束输入格式时，在 `description` 中说明；敏感值优先使用 `secret`
 
+### Package Layout Constraints
+
+生成应用文件时，按目标系统版本区分：
+
+- 若目标是 `lzcos v1.5.0+` 且使用 `LPK v2` / `lzc-cli v2.0.0+`，推荐使用 `package.yml + lzc-manifest.yml`
+- 此时 `package.yml` 负责静态包元数据：`package`、`version`、`name`、`description`、`locales`、`author`、`license`、`homepage`、`min_os_version`、`unsupported_platforms`、`admin_only`
+- 此时 `lzc-manifest.yml` 只保留运行结构字段：`application`、`services`、`ext_config`、`usage`
+- 若目标低于 `lzcos v1.5.0` 或仍使用 `LPK v1`，继续兼容把静态元数据写在 `lzc-manifest.yml` 顶层
+- 若生成 `admin_only: true`，不要同时生成非空 `application.public_path`
+- `lzc-build.yml` 可按需使用 `pkg_id`、`pkg_name` 覆盖最终打包的包名和显示名
+
 ---
 
 ## Docker → LazyCat Mapping
@@ -183,14 +194,19 @@ def classify_service(service_config):
 
 ## Best Practices
 
-### ✅ Do - Complete Manifest Structure (v1.4.1+)
+### ✅ Do - Complete Package + Runtime Structure (LPK v2 / lzcos v1.5.0+)
 
 ```yaml
-name: MyApp
+# package.yml
 package: cloud.lazycat.app.myapp
 version: 1.0.0
-min_os_version: 1.3.8  # Required for modern apps
+name: MyApp
+description: "My application"
+min_os_version: 1.3.8
+```
 
+```yaml
+# lzc-manifest.yml
 application:
   subdomain: myapp
   upstreams:  # ✅ Recommended over routes
@@ -221,6 +237,11 @@ locales:
 ### ❌ Avoid - Common Mistakes
 
 ```yaml
+# ❌ Putting static package metadata in lzc-manifest.yml
+package: cloud.lazycat.app.myapp
+version: 1.0.0
+name: MyApp
+
 # ❌ Old format with lzc-sdk-version
 lzc-sdk-version: "0.1"  # Removed!
 
@@ -233,6 +254,12 @@ services:
 application:
   routes:
     - /=http://myapp:8080/  # Use upstreams instead
+
+# ❌ admin_only cannot be combined with non-empty public_path
+admin_only: true
+application:
+  public_path:
+    - /
 
 # ❌ Hardcoding secrets
 environment:

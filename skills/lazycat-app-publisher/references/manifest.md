@@ -2,19 +2,22 @@
 
 ## 📋 最新格式标准
 
-### ✅ 完整 Manifest 示例（最新推荐）
+### ✅ 推荐结构（`LPK v2` / `lzcos v1.5.0+`）
 
 ```yaml
-# ✅ CORRECT - LazyCat v1.4.1+ 最新格式
-name: MyApp
+# package.yml
 package: cloud.lazycat.app.myapp
 version: 1.0.0
-min_os_version: 1.3.8  # ✅ 必须添加
+name: MyApp
 description: "My application description"
 license: MIT
 homepage: https://github.com/your/app
 author: Your Name
+min_os_version: 1.3.8
+```
 
+```yaml
+# lzc-manifest.yml
 application:
   subdomain: myapp
   background_task: true  # 对于非 HTTP 应用
@@ -63,11 +66,6 @@ services:
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8080/health || exit 1"]
       start_period: 30s
-
-locales:
-  zh:
-    name: "我的应用"
-    description: "我的应用程序描述"
 ```
 
 ---
@@ -165,17 +163,23 @@ command: /bin/bash -c 'sleep 10 && npm run migrate && npm start'
 **对比：**
 ```yaml
 # ❌ 旧格式（已废弃）
+# lzc-manifest.yml
 lzc-sdk-version: "0.1"
-name: MyApp
 package: cloud.lazycat.app.myapp
 version: 1.0.0
+name: MyApp
 
-# ✅ 新格式（推荐）
-name: MyApp
+# ✅ 新格式（推荐，`LPK v2` / `lzcos v1.5.0+`）
+# package.yml
 package: cloud.lazycat.app.myapp
 version: 1.0.0
-min_os_version: 1.3.8  # 必须添加
+name: MyApp
+min_os_version: 1.3.8
 ```
+
+**边界：**
+- 若目标是 `LPK v2`（`lzcos v1.5.0+` + `lzc-cli v2.0.0+`），静态字段应迁移到 `package.yml`
+- 若目标仍是 `LPK v1` / 旧系统，静态字段继续保留在 `lzc-manifest.yml` 顶层仍然兼容
 
 ### 2. **min_os_version 字段**
 | 状态 | 说明 |
@@ -220,25 +224,29 @@ application:
 
 ### 旧格式项目示例
 ```yaml
-# Yuque Sync (旧格式)
-lzc-sdk-version: "0.1"  # 旧
-name: Yuque Sync
+# Yuque Sync (旧格式 lzc-manifest.yml)
+lzc-sdk-version: "0.1"
 package: cloud.lazycat.app.yuque-sync
 version: 1.0.0
-min_os_version: 1.3.8  # ✅ 已有
+name: Yuque Sync
+min_os_version: 1.3.8
 services:
   yuque-sync:
     healthcheck:  # ✅ v1.4.1 格式
       test: ["CMD", "pgrep", "yuque-sync"]
 ```
 
-### 新格式项目示例
+### 新格式项目示例（`LPK v2`）
 ```yaml
-# Blinko (最新格式)
-name: Blinko  # ✅ 无 lzc-sdk-version
+# package.yml
 package: lazycat.community.app.blinko
-min_os_version: 1.3.8  # ✅ 必须
 version: 1.7.1
+name: Blinko
+min_os_version: 1.3.8
+```
+
+```yaml
+# lzc-manifest.yml
 application:
   upstreams:  # ✅ 推荐
     - location: /
@@ -257,11 +265,11 @@ services:
 
 ```yaml
 # ❌ 旧格式 (pre-v1.4.1)
+# lzc-manifest.yml
 lzc-sdk-version: "0.1"
-name: MyApp
 package: cloud.lazycat.app.myapp
 version: 1.0.0
-# 缺少 min_os_version
+name: MyApp
 
 application:
   routes:  # 旧路由方式
@@ -275,11 +283,16 @@ services:
 ```
 
 ```yaml
-# ✅ 新格式 (v1.4.1+)
-name: MyApp
+# ✅ 新格式 (`LPK v2` + v1.4.1+)
+# package.yml
 package: cloud.lazycat.app.myapp
 version: 1.0.0
-min_os_version: 1.3.8  # ✅ 添加
+name: MyApp
+min_os_version: 1.3.8
+```
+
+```yaml
+# lzc-manifest.yml
 
 application:
   upstreams:  # ✅ 推荐
@@ -294,11 +307,13 @@ services:
 ```
 
 **迁移步骤：**
-1. 删除 `lzc-sdk-version` 行
-2. 添加 `min_os_version: 1.3.8`
-3. 将 `routes` 改为 `upstreams`（可选，但推荐）
-4. 将 `health_check` 改为 `healthcheck`
-5. 为所有时间字段添加单位（如 `30` → `30s`）
+0. 确认目标为 `lzcos v1.5.0+` 且构建链路为 `lzc-cli v2.0.0+`
+1. 将静态元数据迁移到 `package.yml`
+2. 删除 `lzc-sdk-version` 行
+3. 在 `package.yml` 添加 `min_os_version: 1.3.8`
+4. 将 `routes` 改为 `upstreams`（可选，但推荐）
+5. 将 `health_check` 改为 `healthcheck`
+6. 为所有时间字段添加单位（如 `30` → `30s`）
 
 ---
 
@@ -322,6 +337,7 @@ services:
 
 创建新应用时，确保：
 - [ ] 没有 `lzc-sdk-version`
+- [ ] 静态元数据在 `package.yml`，不在 `lzc-manifest.yml`
 - [ ] 有 `min_os_version: 1.3.8`
 - [ ] 服务使用 `healthcheck`（无下划线）
 - [ ] 应用使用 `health_check.test_url`（带下划线）
@@ -330,6 +346,7 @@ services:
 - [ ] 用户配置参数使用 `{{.U.xxx}}`
 - [ ] ⚠️ **`command` 字段必须是字符串**（不能是数组）
 - [ ] `sleep` 命令使用纯数字（如 `sleep 15`，不要 `sleep 15s`）
+- [ ] 若 `admin_only: true`，不要生成非空 `application.public_path`
 
 ---
 
