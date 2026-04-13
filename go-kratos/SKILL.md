@@ -90,7 +90,16 @@ func (s *MyService) GetUser(ctx context.Context, req *v1.GetUserRequest) (*v1.Ge
     if err := s.validator.Validate(req); err != nil {
         return nil, err
     }
-    return s.uc.GetUser(ctx, req.UserId)
+    // Call biz layer and convert result
+    user, err := s.uc.GetUser(ctx, req.UserId)
+    if err != nil {
+        return nil, err
+    }
+    // Convert biz.User to proto response
+    return &v1.GetUserResponse{
+        Name:  user.Name,
+        Email: user.Email,
+    }, nil
 }
 ```
 
@@ -137,7 +146,9 @@ func CustomResponseEncoder() http.ServerOption {
             return err
         }
         w.Header().Set("Content-Type", "application/json")
-        w.Write(data)
+        if _, err := w.Write(data); err != nil {
+            return err
+        }
         return nil
     })
 }

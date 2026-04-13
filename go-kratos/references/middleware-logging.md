@@ -208,7 +208,11 @@ srv := http.NewServer(
 
 ## Validate Middleware
 
-Use protovalidate for request validation:
+Kratos provides two approaches for protovalidate integration:
+
+### Approach 1: Middleware-level Validation
+
+Use `validate.Validator()` middleware for automatic request validation:
 
 ```go
 import (
@@ -216,22 +220,55 @@ import (
     "github.com/go-kratos/kratos/v2/middleware/validate"
 )
 
-func provideValidator() protovalidate.Validator {
+func provideValidator() (protovalidate.Validator, error) {
     v, err := protovalidate.New()
     if err != nil {
-        panic(err)
+        return nil, err
     }
-    return v
+    return v, nil
 }
 
 srv := http.NewServer(
     http.Middleware(
-        validate.Validator(provideValidator()),
+        validate.Validator(provideValidator()),  // Validates all proto requests
     ),
 )
 ```
 
-**Note:** For partial updates, you may need to skip validation. Use whitelist approach.
+### Approach 2: Service-level Validation
+
+For selective validation or custom error handling, validate in service layer:
+
+```go
+type MyService struct {
+    v1.UnimplementedMyServiceServer
+    validator protovalidate.Validator
+    uc        *biz.MyUseCase
+    log       *log.Helper
+}
+
+func NewMyService(uc *biz.MyUseCase, logger log.Logger, validator protovalidate.Validator) *MyService {
+    return &MyService{
+        uc:        uc,
+        validator: validator,
+        log:       log.NewHelper(logger),
+    }
+}
+
+func (s *MyService) GetUser(ctx context.Context, req *v1.GetUserRequest) (*v1.GetUserResponse, error) {
+    // Validate request before business logic
+    if err := s.validator.Validate(req); err != nil {
+        return nil, v1.ErrorInvalidArgument("validation failed: %v", err)
+    }
+    return s.uc.GetUser(ctx, req.UserId)
+}
+```
+
+**When to use each approach:**
+- **Middleware-level**: All requests need validation, consistent error format
+- **Service-level**: Selective validation, partial updates, custom error messages
+
+**Note:** For partial updates (PATCH), you may need to skip validation on optional fields. Use service-level validation for this case.
 
 ---
 

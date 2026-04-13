@@ -98,11 +98,17 @@ func CustomErrorEncoder() http.ServerOption {
         }
         
         codec := encoding.GetCodec("json")
-        data, _ := codec.Marshal(reply)
+        data, err := codec.Marshal(reply)
+        if err != nil {
+            w.WriteHeader(http.StatusInternalServerError)
+            return
+        }
         
         w.Header().Set("Content-Type", "application/json")
         w.WriteHeader(se.StatusCode)
-        w.Write(data)
+        if _, err := w.Write(data); err != nil {
+            log.Errorf("write error response failed: %v", err)
+        }
     })
 }
 ```

@@ -136,9 +136,83 @@ func (r *userRepo) FindByID(ctx context.Context, id string) (*biz.User, error) {
 
 ---
 
+## Dependency Injection
+
+Kratos supports two DI approaches: **wire** (official Kratos layout) and **fx** (alternative).
+
+### Wire (Official Kratos Layout)
+
+Wire is Google's compile-time dependency injection tool, used in official Kratos project templates.
+
+**Install:**
+```bash
+go install github.com/google/wire/cmd/wire@latest
+```
+
+**Wire.go definition:**
+```go
+// go build will ignore this file, but wire uses it
+
+//+build wireinject
+
+package main
+
+import (
+    "github.com/google/wire"
+    "github.com/go-kratos/kratos/v2"
+    "github.com/go-kratos/kratos/v2/log"
+    "github.com/myorg/myproject/internal/biz"
+    "github.com/myorg/myproject/internal/data"
+    "github.com/myorg/myproject/internal/server"
+    "github.com/myorg/myproject/internal/service"
+)
+
+func wireApp(*conf.Server, *conf.Data, log.Logger) (*kratos.App, func(), error) {
+    panic(wire.Build(
+        data.ProviderSet,
+        biz.ProviderSet,
+        service.ProviderSet,
+        server.ProviderSet,
+        newApp,
+    ))
+}
+```
+
+**ProviderSet in each layer:**
+```go
+// internal/data/data.go
+var ProviderSet = wire.NewSet(NewData, NewUserRepo)
+
+// internal/biz/biz.go
+var ProviderSet = wire.NewSet(NewUserUseCase)
+
+// internal/service/service.go
+var ProviderSet = wire.NewSet(NewUserService)
+
+// internal/server/server.go
+var ProviderSet = wire.NewSet(NewHTTPServer, NewGRPCServer)
+```
+
+**Generate wire_gen.go:**
+```bash
+wire ./cmd/server
+```
+
+**Advantages:**
+- Compile-time verification (errors caught before runtime)
+- No runtime reflection overhead
+- Clear dependency graph visible in generated code
+- Official Kratos template uses this approach
+
+---
+
+### fx (Alternative - Uber's DI)
+
+fx is Uber's runtime dependency injection framework.
+
 ## fx Dependency Injection
 
-Kratos uses Uber fx for dependency injection:
+Kratos also supports Uber fx for dependency injection:
 
 ### Module Pattern
 

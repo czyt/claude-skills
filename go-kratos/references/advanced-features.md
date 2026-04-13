@@ -11,17 +11,30 @@ Guide for MCP server integration and other advanced Kratos features.
 
 ## MCP Server Integration
 
-Kratos v2+ supports MCP (Model Context Protocol) server capability, allowing Kratos services to act as MCP servers for AI agents.
+Kratos can be combined with MCP (Model Context Protocol) to expose microservice functionality as AI agent tools.
 
 ### What is MCP?
 
-MCP is a protocol for AI agents to discover and call tools. Kratos services can expose their functionality as MCP tools, enabling:
+MCP is a protocol for AI agents to discover and call tools. By integrating MCP with Kratos services, you can:
 
-- AI agents to call Kratos APIs directly
-- Tool discovery and schema validation
-- Structured input/output handling
+- Expose Kratos APIs as MCP tools for AI agents
+- Enable tool discovery and schema validation
+- Handle structured input/output for AI workflows
 
-### Basic Setup
+### Library Options
+
+Two main Go MCP libraries exist:
+
+| Library | Maintainer | Use Case |
+|---------|------------|----------|
+| `github.com/mark3labs/mcp-go` | Mark3 Labs | Community implementation |
+| `github.com/modelcontextprotocol/go-sdk` | Anthropic | Official SDK |
+
+**Note:** No official Kratos MCP transport exists yet. Integration requires custom setup.
+
+### Integration Approach: MCP Handler in Kratos HTTP Server
+
+Add MCP endpoint to existing Kratos HTTP server:
 
 ```go
 import (
@@ -29,21 +42,14 @@ import (
     "fmt"
     "github.com/go-kratos/kratos/v2"
     "github.com/go-kratos/kratos/v2/log"
-    tm "github.com/go-kratos/kratos/contrib/transport/mcp/v2"
+    "github.com/go-kratos/kratos/v2/transport/http"
     mcp "github.com/mark3labs/mcp-go/mcp"
+    "github.com/mark3labs/mcp-go/server"
 )
-```
 
-### MCP Server Creation
-
-```go
 func main() {
     // Create MCP server
-    srv := tm.NewServer(
-        "kratos-mcp",     // Server name
-        "v1.0.0",         // Version
-        tm.Address(":8000"),
-    )
+    mcpSrv := server.NewMCPServer("kratos-mcp", "v1.0.0")
     
     // Define tool
     tool := mcp.NewTool("hello_world",
@@ -55,12 +61,23 @@ func main() {
     )
     
     // Add tool handler
-    srv.AddTool(tool, helloHandler)
+    mcpSrv.AddTool(tool, helloHandler)
+    
+    // Create Kratos HTTP server with MCP endpoint
+    httpSrv := http.NewServer(http.Address(":8000"))
+    
+    // Register MCP handler on Kratos HTTP server
+    // MCP typically uses SSE (Server-Sent Events) transport
+    route := httpSrv.Route("/")
+    route.GET("/mcp", func(ctx http.Context) error {
+        // Handle MCP SSE requests
+        return handleMCPRequest(ctx, mcpSrv)
+    })
     
     // Create Kratos app
     app := kratos.New(
         kratos.Name("kratos-mcp"),
-        kratos.Server(srv),
+        kratos.Server(httpSrv),
     )
     
     if err := app.Run(); err != nil {
@@ -87,9 +104,7 @@ func helloHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallTo
 ### Multiple Tools
 
 ```go
-func main() {
-    srv := tm.NewServer("my-mcp-server", "v1.0.0", tm.Address(":8000"))
-    
+func registerMCPTools(mcpSrv *server.MCPServer, userUC *biz.UserUseCase, orderUC *biz.OrderUseCase) {
     // Tool 1: User lookup
     userTool := mcp.NewTool("get_user",
         mcp.WithDescription("Get user by ID"),
@@ -98,8 +113,19 @@ func main() {
             mcp.Description("User identifier"),
         ),
     )
-    srv.AddTool(userTool, getUserHandler)
-    
+    mcpSrv.AddTool(userTool, func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+        userID, ok := req.Params.Arguments["user_id"].(string)
+        if !ok {
+            return mcp.NewToolResultError("user_id must be a string"), nil
+        }
+        // Call biz layer
+        user, err := userUC.GetUser(ctx, userID)
+        if err != nil {
+            return mcp.NewToolResultError(err.Error()), nil
+        }
+        return mcp.NewToolResultText(fmt.Sprintf("User: %s, Email: %s", user.Name, user.Email)), nil
+    })
+
     // Tool 2: Order creation
     orderTool := mcp.NewTool("create_order",
         mcp.WithDescription("Create a new order"),
@@ -107,91 +133,74 @@ func main() {
         mcp.WithString("product_id", mcp.Required()),
         mcp.WithNumber("quantity", mcp.Required()),
     )
-    srv.AddTool(orderTool, createOrderHandler)
-    
-    // Run
-    app := kratos.New(kratos.Name("my-mcp"), kratos.Server(srv))
-    app.Run()
-}
-
-func getUserHandler(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-    userID, ok := req.Params.Arguments["user_id"].(string)
-    if !ok {
-        return mcp.NewToolResultError("user_id must be a string"), nil
-    }
-    // Call biz layer
-    user, err := userUC.GetUser(ctx, userID)
-    if err != nil {
-        return mcp.NewToolResultError(err.Error()), nil
-    }
-    return mcp.NewToolResultText(fmt.Sprintf("User: %s, Email: %s", user.Name, user.Email)), nil
-}
-
-func createOrderHandler(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-    userID, ok := req.Params.Arguments["user_id"].(string)
-    if !ok {
-        return mcp.NewToolResultError("user_id must be a string"), nil
-    }
-    productID, ok := req.Params.Arguments["product_id"].(string)
-    if !ok {
-        return mcp.NewToolResultError("product_id must be a string"), nil
-    }
-    quantity, ok := req.Params.Arguments["quantity"].(float64)
-    if !ok {
-        return mcp.NewToolResultError("quantity must be a number"), nil
-    }
-    
-    // Call biz layer
-    order, err := orderUC.CreateOrder(ctx, userID, productID, int(quantity))
-    if err != nil {
-        return mcp.NewToolResultError(err.Error()), nil
-    }
-    
-    return mcp.NewToolResultText(fmt.Sprintf("Order created: %s", order.ID)), nil
+    mcpSrv.AddTool(orderTool, func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+        userID, ok := req.Params.Arguments["user_id"].(string)
+        if !ok {
+            return mcp.NewToolResultError("user_id must be a string"), nil
+        }
+        productID, ok := req.Params.Arguments["product_id"].(string)
+        if !ok {
+            return mcp.NewToolResultError("product_id must be a string"), nil
+        }
+        quantity, ok := req.Params.Arguments["quantity"].(float64)
+        if !ok {
+            return mcp.NewToolResultError("quantity must be a number"), nil
+        }
+        
+        // Call biz layer
+        order, err := orderUC.CreateOrder(ctx, userID, productID, int(quantity))
+        if err != nil {
+            return mcp.NewToolResultError(err.Error()), nil
+        }
+        
+        return mcp.NewToolResultText(fmt.Sprintf("Order created: %s", order.ID)), nil
+    })
 }
 ```
 
-### MCP with Middleware
+### MCP with Kratos Middleware
 
-Add custom middleware for logging, auth, etc.:
+Wrap MCP endpoint with Kratos middleware for logging, auth, etc.:
 
 ```go
-func MCPLoggingMiddleware(next http.Handler) http.Handler {
-    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-        log.Infof("MCP request: %s %s", r.Method, r.URL.Path)
-        next.ServeHTTP(w, r)
+func NewHTTPServer(c *conf.Server, mcpSrv *server.MCPServer, logger log.Logger) *http.Server {
+    srv := http.NewServer(
+        http.Address(c.Http.Addr),
+        http.Middleware(
+            recovery.Recovery(),
+            tracing.Server(),
+            logging.Server(logger),
+        ),
+    )
+    
+    // MCP endpoint with middleware chain
+    route := srv.Route("/")
+    route.GET("/mcp", func(ctx http.Context) error {
+        http.SetOperation(ctx, "/mcp/handle")
+        h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+            return handleMCPRequest(ctx, mcpSrv)
+        })
+        resp, err := h(ctx, nil)
+        if err != nil {
+            return err
+        }
+        return ctx.JSON(200, resp)
     })
+    
+    return srv
 }
-
-srv := tm.NewServer(
-    "kratos-mcp",
-    "v1.0.0",
-    tm.Address(":8000"),
-    tm.Middleware(MCPLoggingMiddleware),
-)
 ```
 
 ### Health Check
 
-Add health check endpoint:
+Add health check alongside MCP endpoint:
 
 ```go
-func HealthMiddleware(next http.Handler) http.Handler {
-    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-        if r.URL.Path == "/health/ready" {
-            w.WriteHeader(http.StatusOK)
-            return
-        }
-        next.ServeHTTP(w, r)
-    })
-}
-
-srv := tm.NewServer(
-    "kratos-mcp",
-    "v1.0.0",
-    tm.Address(":8000"),
-    tm.Middleware(HealthMiddleware),
-)
+route := srv.Route("/")
+route.GET("/health/ready", func(ctx http.Context) error {
+    return ctx.JSON(200, map[string]string{"status": "ok"})
+})
+route.GET("/mcp", handleMCP)
 ```
 
 ---

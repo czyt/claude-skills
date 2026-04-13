@@ -52,13 +52,25 @@ import (
 
 var signingKey = []byte("your-secret-key")
 
+// jwt.Server requires a Keyfunc for token verification
 srv := http.NewServer(
     http.Address(":8000"),
     http.Middleware(
-        jwt.Server(signingKey, jwt.WithSigningMethod(jwtV4.SigningMethodHS256)),
+        jwt.Server(
+            func(token *jwtV4.Token) (interface{}, error) {
+                // Verify signing method
+                if _, ok := token.Method.(*jwtV4.SigningMethodHMAC); !ok {
+                    return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+                }
+                return signingKey, nil
+            },
+            jwt.WithSigningMethod(jwtV4.SigningMethodHS256),
+        ),
     ),
 )
 ```
+
+**Why Keyfunc:** The `jwt.Server` middleware requires a function to retrieve the verification key. This allows for key rotation and multi-key scenarios. For simple cases, return the static key directly.
 
 ### JWT Best Practices
 
