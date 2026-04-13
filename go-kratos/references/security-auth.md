@@ -164,16 +164,26 @@ import "github.com/casbin/casbin/v2/persist"
 type Watcher struct {
     callback func(string)
     notify   chan struct{}
+    done     chan struct{}  // For graceful shutdown
 }
 
 func (w *Watcher) SetUpdateCallback(fn func(string)) error {
     w.callback = fn
     go func() {
-        for range w.notify {
-            fn("policy updated")
+        for {
+            select {
+            case <-w.notify:
+                fn("policy updated")
+            case <-w.done:
+                return  // Graceful shutdown
+            }
         }
     }()
     return nil
+}
+
+func (w *Watcher) Close() {
+    close(w.done)
 }
 
 func (w *Watcher) Update() error {

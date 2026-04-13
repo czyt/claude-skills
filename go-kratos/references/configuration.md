@@ -151,22 +151,25 @@ func provideConfigs(flagConf string) *conf.Bootstrap {
     
     var bc conf.Bootstrap
     if err := c.Scan(&bc); err != nil {
-        panic(err)
+        panic(err)  // Startup failure - program cannot run without config
     }
     
     // Create validator
     validator, err := protovalidate.New()
     if err != nil {
-        panic(err)
+        panic(err)  // Startup failure - validator is required
     }
     
     // Validate config before boot
     if err := validator.Validate(&bc); err != nil {
-        panic(err)
+        panic(err)  // Startup failure - invalid config is fatal
     }
     
     return &bc
 }
+```
+
+**Why panic is acceptable here:** This is startup code. If config is invalid, the application cannot run. Panics at startup are appropriate because there's no graceful recovery possible. For library/utility functions, prefer returning errors instead.
 ```
 
 **Why this matters:** Invalid config is caught at startup, not during operation. Proto-based validation keeps rules with data definition.
@@ -316,8 +319,8 @@ type processor interface {
     // LoadSeeds: Get initialization data
     LoadSeeds() ([]interface{}, error)
     
-    // GetJobId: Task sequence number
-    GetJobId() int
+    // GetJobID: Task sequence number
+    GetJobID() int
     
     // GetDepends: Dependencies (job IDs)
     GetDepends() []int
@@ -332,7 +335,7 @@ type DatabaseInit struct {
     depends  []int
 }
 
-func (d *DatabaseInit) GetJobId() int { return d.jobID }
+func (d *DatabaseInit) GetJobID() int { return d.jobID }
 func (d *DatabaseInit) GetDepends() []int { return d.depends }
 func (d *DatabaseInit) IsInit() bool {
     // Check if tables exist
@@ -356,7 +359,7 @@ Sort processors by dependencies:
 func runInitialization(processors []processor) error {
     // Sort by dependencies (topological order)
     sort.Slice(processors, func(i, j int) bool {
-        return processors[i].GetJobId() < processors[j].GetJobId()
+        return processors[i].GetJobID() < processors[j].GetJobID()
     })
     
     for _, p := range processors {

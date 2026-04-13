@@ -51,7 +51,9 @@ func CustomResponseEncoder() http.ServerOption {
             return err
         }
         w.Header().Set("Content-Type", "application/json")
-        w.Write(data)
+        if _, err := w.Write(data); err != nil {
+            return err
+        }
         return nil
     })
 }
@@ -377,8 +379,24 @@ func (uc *MyUseCase) HandleWebSocket(id string, httpCtx http.Context) error {
     if err != nil {
         return err
     }
-    go handleWsMessage(id, conn)
+    go handleWsMessage(ctx, id, conn)  // Pass context for cancellation
     return nil
+}
+
+func handleWsMessage(ctx context.Context, id string, conn *websocket.Conn) {
+    defer conn.Close()
+    for {
+        select {
+        case <-ctx.Done():
+            return  // Graceful shutdown
+        default:
+            mt, message, err := conn.ReadMessage()
+            if err != nil {
+                return  // Connection closed
+            }
+            conn.WriteMessage(mt, message)
+        }
+    }
 }
 ```
 

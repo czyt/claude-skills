@@ -115,7 +115,10 @@ func main() {
 }
 
 func getUserHandler(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-    userID := req.Params.Arguments["user_id"].(string)
+    userID, ok := req.Params.Arguments["user_id"].(string)
+    if !ok {
+        return mcp.NewToolResultError("user_id must be a string"), nil
+    }
     // Call biz layer
     user, err := userUC.GetUser(ctx, userID)
     if err != nil {
@@ -125,9 +128,18 @@ func getUserHandler(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTool
 }
 
 func createOrderHandler(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-    userID := req.Params.Arguments["user_id"].(string)
-    productID := req.Params.Arguments["product_id"].(string)
-    quantity := req.Params.Arguments["quantity"].(float64)
+    userID, ok := req.Params.Arguments["user_id"].(string)
+    if !ok {
+        return mcp.NewToolResultError("user_id must be a string"), nil
+    }
+    productID, ok := req.Params.Arguments["product_id"].(string)
+    if !ok {
+        return mcp.NewToolResultError("product_id must be a string"), nil
+    }
+    quantity, ok := req.Params.Arguments["quantity"].(float64)
+    if !ok {
+        return mcp.NewToolResultError("quantity must be a number"), nil
+    }
     
     // Call biz layer
     order, err := orderUC.CreateOrder(ctx, userID, productID, int(quantity))
