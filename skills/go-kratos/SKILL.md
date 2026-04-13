@@ -1,6 +1,6 @@
 ---
 name: go-kratos
-description: Go-Kratos microservice framework development assistant. TRIGGER when: user mentions kratos, protobuf API definition, Go microservice layered architecture, HTTP/gRPC service configuration, middleware development, JWT/Casbin auth, buf generation tool, proto validate, WebSocket/file upload. Trigger even without explicit "kratos" mention when these topics arise, or when project contains buf.yaml, internal/service, internal/biz directories.
+description: "Go-Kratos microservice framework development assistant. TRIGGER when: user mentions kratos, protobuf API definition, Go microservice layered architecture, HTTP/gRPC service configuration, middleware development, JWT/Casbin auth, buf generation tool, proto validate, WebSocket/file upload. Trigger even without explicit 'kratos' mention when these topics arise, or when project contains buf.yaml, internal/service, internal/biz directories."
 ---
 
 # Go-Kratos Skill
