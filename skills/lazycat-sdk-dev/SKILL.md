@@ -1,33 +1,33 @@
 ---
 name: lazycat-sdk-dev
-description: LazyCat SDK development for Go/JS apps interacting with microservice APIs (users, devices, apps, box control). Includes frontend WebShell capabilities (AppCommon, MediaSession, theme, navigation). Triggers on @lazycatcloud/sdk imports, lzc-sdk references, or SDK/WebShell/device queries.
+description: LazyCat SDK 开发技能，用于 Go/JS 应用与微服务 API 交互（用户、设备、应用、设备控制）。包含前端 WebShell 能力（AppCommon、MediaSession、主题、导航）。触发词：@lazycatcloud/sdk 导入、lzc-sdk 引用、SDK/WebShell/设备查询。
 ---
 
-# LazyCat SDK Development
+# LazyCat SDK 开发
 
-This skill helps you develop applications that interact with the LazyCat microservice system using the official SDKs.
+协助开发者使用官方 SDK 与 LazyCat 微服务系统交互。
 
-## Supported Languages
+## 支持语言
 
-| Language | Package | Import Path |
-|----------|---------|-------------|
+| 语言 | 包名 | 导入路径 |
+|------|------|---------|
 | **Go** | `gitee.com/linakesi/lzc-sdk` | `gitee.com/linakesi/lzc-sdk/lang/go` |
-| **JavaScript/TypeScript** | `@lazycatcloud/sdk` | npm package |
+| **JavaScript/TypeScript** | `@lazycatcloud/sdk` | npm 包 |
 
-More languages coming soon: Rust, Dart, Cpp, Java, Python, Ruby, C#, PHP, Objective-C, Kotlin.
+即将支持：Rust、Dart、Cpp、Java、Python、Ruby、C#、PHP、Objective-C、Kotlin。
 
-## Reference Documents
+## 参考文档
 
-| Document | Content |
-|----------|---------|
+| 文档 | 内容 |
+|------|------|
 | [references/frontend-extensions.md](references/frontend-extensions.md) | **前端客户端能力** - iOS/Android WebShell 能力矩阵，AppCommon API，导航栏/状态栏 meta，MediaSession 等 |
-| [references/go-sdk.md](references/go-sdk.md) | **Go SDK Complete Reference** - API Gateway, User/Device/Box/App management, HTTP handlers |
-| [references/js-sdk.md](references/js-sdk.md) | **JavaScript/TypeScript SDK Reference** - Basic usage, API operations, frontend integration |
-| [references/extensions.md](references/extensions.md) | **Extensions** - minidb, file-pickers, cross-app communication |
+| [references/go-sdk.md](references/go-sdk.md) | **Go SDK 完整参考** - API Gateway，User/Device/Box/App 管理，HTTP handlers |
+| [references/js-sdk.md](references/js-sdk.md) | **JavaScript/TypeScript SDK 参考** - 基础用法，API 操作，前端集成 |
+| [references/extensions.md](references/extensions.md) | **扩展模块** - minidb，file-pickers，跨应用通信 |
 
 ---
 
-## Development Workflow
+## 开发工作流
 
 ### Phase 1: 环境初始化
 
@@ -103,7 +103,7 @@ ctx = metadata.AppendToOutgoingContext(ctx,
 
 #### Step 2.3: 编写业务代码
 
-参考 [Common Use Cases](#common-use-cases) 或具体 reference 文档。
+参考 [常用示例](#常用示例) 或具体参考文档。
 
 ### Phase 3: 错误处理与测试
 
@@ -145,7 +145,7 @@ if err != nil {
 
 ---
 
-## Quick Start
+## 快速开始
 
 ### Go SDK
 
@@ -165,11 +165,11 @@ func main() {
     }
     defer gw.Close()
 
-    // Query user info
+    // 查询用户信息
     userInfo, _ := gw.Users.QueryUserInfo(ctx, &common.UserID{Uid: "lazycat"})
     fmt.Println("User:", userInfo.Nickname)
 
-    // List devices
+    // 列出设备
     devices, _ := gw.Devices.ListEndDevices(ctx, &common.ListEndDeviceRequest{Uid: "lazycat"})
     for _, d := range devices.Devices {
         fmt.Printf("Device: %s, Online: %v\n", d.Name, d.IsOnline)
@@ -189,58 +189,58 @@ console.log("Applications:", apps.infoList)
 
 ---
 
-## Core APIs Overview
+## 核心 API 概览
 
-### Go SDK Services
+### Go SDK 服务
 
-| Service | Purpose | Key Methods |
-|---------|---------|-------------|
-| `gw.Users` | User management | `QueryUserInfo` |
-| `gw.Devices` | Device management | `ListEndDevices` |
-| `gw.Box` | Device control | `QueryInfo`, `ChangePowerLed`, `Shutdown` |
-| `gw.PkgManager` | App management | `QueryApplication`, `Resume`, `Pause` |
+| 服务 | 用途 | 主要方法 |
+|------|------|---------|
+| `gw.Users` | 用户管理 | `QueryUserInfo` |
+| `gw.Devices` | 设备管理 | `ListEndDevices` |
+| `gw.Box` | 设备控制 | `QueryInfo`, `ChangePowerLed`, `Shutdown` |
+| `gw.PkgManager` | 应用管理 | `QueryApplication`, `Resume`, `Pause` |
 
-### Core Pattern
+### 核心模式
 
 ```go
-// 1. Create API Gateway
+// 1. 创建 API Gateway
 gw, err := gohelper.NewAPIGateway(ctx)
 if err != nil {
     return err
 }
-defer gw.Close()  // Always close!
+defer gw.Close()  // 必须关闭！
 
-// 2. Call SDK methods
+// 2. 调用 SDK 方法
 result, err := gw.Service.Method(ctx, &Request{...})
 ```
 
-### User Context in HTTP Handlers
+### HTTP Handler 中的用户上下文
 
-LazyCat injects user info via HTTP headers:
+LazyCat 通过 HTTP headers 注入用户信息：
 
 ```go
-// Extract from headers
+// 从 headers 提取
 userID := c.GetHeader("x-hc-user-id")
 userRole := c.GetHeader("x-hc-user-role")
 
-// Add to gRPC context
+// 添加到 gRPC context
 ctx = metadata.AppendToOutgoingContext(ctx, "x-hc-user-id", userID)
 ```
 
-**Available Headers:**
+**可用 Headers:**
 
-| Header | Description |
-|--------|-------------|
-| `x-hc-user-id` | Current user ID |
-| `x-hc-user-role` | User role (`admin`, `user`) |
-| `x-hc-device-id` | Device ID |
-| `x-hc-device-version` | Device version |
+| Header | 说明 |
+|--------|------|
+| `x-hc-user-id` | 当前用户 ID |
+| `x-hc-user-role` | 用户角色 (`admin`, `user`) |
+| `x-hc-device-id` | 设备 ID |
+| `x-hc-device-version` | 设备版本 |
 
 ---
 
-## Common Use Cases
+## 常用示例
 
-### 1. Query Installed Apps
+### 1. 查询已安装应用
 
 ```go
 resp, _ := gw.PkgManager.QueryApplication(ctx, &sys.QueryApplicationRequest{})
@@ -251,44 +251,44 @@ for _, app := range resp.InfoList {
 }
 ```
 
-### 2. Resume/Pause Application
+### 2. 启动/暂停应用
 
 ```go
-// Resume
+// 启动
 gw.PkgManager.Resume(ctx, &sys.AppInstance{
     Appid: appID,
     Uid:   userID,
 })
 
-// Pause
+// 暂停
 gw.PkgManager.Pause(ctx, &sys.AppInstance{
     Appid: appID,
     Uid:   userID,
 })
 ```
 
-### 3. Control LED
+### 3. 控制 LED
 
 ```go
-// Get current status
+// 获取当前状态
 boxInfo, _ := gw.Box.QueryInfo(ctx, nil)
 fmt.Println("LED on:", boxInfo.PowerLed)
 
-// Toggle LED
+// 切换 LED
 gw.Box.ChangePowerLed(ctx, &common.ChangePowerLedRequest{
     PowerLed: !boxInfo.PowerLed,
 })
 ```
 
-### 4. Shutdown/Reboot
+### 4. 关机/重启
 
 ```go
-// Reboot
+// 重启
 gw.Box.Shutdown(ctx, &common.ShutdownRequest{
     Action: common.ShutdownRequest_Reboot,
 })
 
-// Power off
+// 关机
 gw.Box.Shutdown(ctx, &common.ShutdownRequest{
     Action: common.ShutdownRequest_Poweroff,
 })
@@ -296,7 +296,7 @@ gw.Box.Shutdown(ctx, &common.ShutdownRequest{
 
 ---
 
-## Frontend Client Capabilities
+## 前端客户端能力
 
 LazyCat iOS/Android 客户端为 WebShell 内运行的前端应用注入了丰富的原生能力。
 
@@ -346,9 +346,9 @@ await AppCommon.ShareWithFiles("/path/to/file.pdf")
 
 ---
 
-## Extensions
+## 扩展模块
 
-### minidb (MongoDB-like database)
+### minidb（类 MongoDB 数据库）
 
 ```javascript
 import { Minidb } from "@lazycatcloud/minidb"
@@ -360,7 +360,7 @@ await db.update({ name: "item1" }, { $set: { value: 200 } })
 await db.remove({ name: "item1" })
 ```
 
-### File Pickers
+### 文件选择器
 
 ```javascript
 import { pickFiles } from "@lazycatcloud/lzc-file-pickers"
@@ -373,7 +373,7 @@ const files = await pickFiles({
 
 ---
 
-## Error Handling & Edge Cases
+## 错误处理与边界条件
 
 ### 常见错误场景
 
@@ -450,18 +450,18 @@ if (isClient) {
 
 ---
 
-## Best Practices
+## 最佳实践
 
-1. **Always close API Gateway**: `defer gw.Close()`
-2. **Add user context**: `metadata.AppendToOutgoingContext(ctx, "x-hc-user-id", userID)`
-3. **Handle errors gracefully**: SDK calls may fail, provide fallbacks
-4. **Reuse connections**: Create one gateway per operation, not per call
-5. **Use timeouts**: `context.WithTimeout(ctx, 10*time.Second)`
+1. **总是关闭 API Gateway**: `defer gw.Close()`
+2. **添加用户上下文**: `metadata.AppendToOutgoingContext(ctx, "x-hc-user-id", userID)`
+3. **优雅处理错误**: SDK 调用可能失败，提供 fallback
+4. **复用连接**: 每次操作创建一个 gateway，而非每次调用
+5. **使用超时**: `context.WithTimeout(ctx, 10*time.Second)`
 
 ---
 
-## References
+## 参考资料
 
-- **Official Docs**: https://developer.lazycat.cloud
-- **SDK Repository**: https://gitee.com/linakesi/lzc-sdk
-- **npm Packages**: https://www.npmjs.com/search?q=%40lazycatcloud
+- **官方文档**: https://developer.lazycat.cloud
+- **SDK 仓库**: https://gitee.com/linakesi/lzc-sdk
+- **npm 包**: https://www.npmjs.com/search?q=%40lazycatcloud
