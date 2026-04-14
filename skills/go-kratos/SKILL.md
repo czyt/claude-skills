@@ -358,3 +358,75 @@ Kratos 推荐使用 buf 而非原生 protoc：
 - 基于 proto 的校验定义
 
 **为什么重要**: 校验规则与数据定义在一起，无需单独校验代码。
+
+---
+
+## 错误处理与边界条件
+
+### 常见错误场景
+
+| 场景 | 原因 | 解决方案 |
+|------|------|---------|
+| proto 校验失败 | 字段不符合 buf.validate 规则 | 返回详细校验错误，指明哪个字段 |
+| biz 层返回错误 | 业务逻辑异常 | 使用 Kratos 错误码规范，封装 `v1.ErrorXxx` |
+| data 层数据库错误 | 连接失败/查询异常 | 包装为 biz 错误，记录日志 |
+| JWT 解析失败 | token 无效/过期 | 返回 401，引导用户重新登录 |
+| fx 模块注册失败 | 依赖缺失 | 检查 Provider 顺序，确认所有依赖已注册 |
+
+### Kratos 错误码规范
+
+```go
+// api/errors/errors.proto
+enum ErrorReason {
+  USER_NOT_FOUND = 0;
+  INVALID_REQUEST = 1;
+}
+
+// 使用
+import "google/rpc/error_details.proto"
+
+// service 层返回
+if user == nil {
+    return nil, v1.ErrorUserNotFound("用户 %s 不存在", req.UserId)
+}
+```
+
+### 错误包装与传递
+
+```go
+// biz 层
+func (uc *MyUseCase) GetUser(ctx context.Context, id string) (*User, error) {
+    user, err := uc.repo.FindByID(ctx, id)
+    if err != nil {
+        // 包装底层错误，添加上下文
+        return nil, errors.Wrapf(err, "查找用户 %s 失败", id)
+    }
+    if user == nil {
+        // 返回业务错误
+        return nil, v1.ErrorUserNotFound("用户不存在")
+    }
+    return user, nil
+}
+
+// service 层
+func (s *MyService) GetUser(ctx context.Context, req *v1.GetUserRequest) (*v1.GetUserResponse, error) {
+    user, err := s.uc.GetUser(ctx, req.UserId)
+    if err != nil {
+        // biz 错误直接返回，Kratos 自动转换 HTTP 状态码
+        return nil, err
+    }
+    return &v1.GetUserResponse{Name: user.Name}, nil
+}
+```
+
+### 边界条件处理
+
+| 边界情况 | 判断条件 | 处理方式 |
+|---------|---------|---------|
+| 空请求 | `req == nil` 或字段全空 | 返回 `INVALID_REQUEST` 错误 |
+| ID 格式非法 | 非 UUID/数字格式 | proto 校验拦截，返回 400 |
+| 分页越界 | `page > total_pages` | 返回空列表，不报错 |
+| 权限不足 | `role < required` | 返回 403 Forbidden |
+| 服务降级 | 外部服务不可用 | 返回 fallback 数据或缓存 |
+
+---
