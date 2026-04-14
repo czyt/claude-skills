@@ -849,8 +849,14 @@ application:
 
 ### 🚨 TOP 5 CRITICAL RULES
 
+执行转换时，**遇到以下情况必须暂停并询问用户**：
+
 #### ❌ Rule 1: DO NOT Auto-Add Healthcheck
 如果原始 docker-compose.yml 没有 healthcheck，不要自动添加。容器可能缺少 curl/wget 工具。
+
+**⚠️ 检查点**: 发现服务无 healthcheck 时，询问用户：
+- 「服务 X 无健康检查配置，是否需要添加？」
+- 若用户选择添加，提供常见的 healthcheck 模板（见 [healthcheck.md](references/healthcheck.md)）
 
 #### ❌ Rule 2: binds Only Supports Directories, Not Files
 使用 contentdir + setup_script 替代文件挂载：
@@ -865,6 +871,8 @@ services:
       cp /lzcapp/pkg/content/nginx.conf /etc/nginx/nginx.conf
 ```
 
+**⚠️ 检查点**: 发现文件挂载（如 `/path/file.conf:/etc/file.conf`）时，提示用户转换为 contentdir 方案。
+
 #### ❌ Rule 3: LPK v2 MUST Set min_os_version: 1.5.0
 LPK v2 格式（tar + package.yml）是 v1.5.0+ 才支持的特性：
 ```yaml
@@ -874,15 +882,23 @@ version: 1.0.0
 min_os_version: 1.5.0  # ✅ 必须设置
 ```
 
+**⚠️ 检查点**: 若用户需要兼容旧版本（< v1.5.0），提示切换到 LPK v1 格式（zip）。
+
 #### ❌ Rule 4: DO NOT Generate Invalid Fields
 严格按官方规范生成配置文件，禁止生成不存在的字段：
 - lzc-build.yml: 禁止 `package`, `version`, `name`, `subdomain` 等
 - lzc-deploy-params.yml: 禁止 `placeholder`, `regex`, `min`, `max`, `type: number`
 
+**⚠️ 检查点**: 每次生成配置后，对照 [strict-constraints.md](references/strict-constraints.md) 验证字段有效性。
+
 #### ❌ Rule 5: All Password Apps MUST Have Passwordless Config
 如果应用自带密码体系，必须配置免密登录：
 - 使用 `simple-inject-password` 自动填充
 - 或使用三阶段联动记录用户修改的密码
+
+**⚠️ 检查点**: 检测到密码字段（如 `PASSWORD`, `SECRET_KEY`, `ADMIN_PASSWORD`）时，**强制询问**：
+- 「检测到密码体系，请选择免密登录方案：[简单自动填充 / 三阶段联动 / Basic Auth]」
+- 用户确认后才能继续生成配置
 
 ---
 
