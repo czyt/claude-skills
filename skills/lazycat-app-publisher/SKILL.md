@@ -1,62 +1,62 @@
 ---
 name: lazycat-app-publisher
-description: LazyCat v1.5.0+ app publisher with intelligent Docker Compose conversion, smart dependency analysis, auto-generated credentials, compose_override support, advanced routing (upstreams/ingress), file handlers, hardware acceleration, and complete publishing workflow. Default LPK v2 format with package.yml + lzc-manifest.yml separation. Triggers when converting Docker Compose to LazyCat format, publishing apps to LazyCat store, creating LPK packages, or managing LazyCat application lifecycle.
+description: LazyCat v1.5.0+ 应用发布助手，支持智能 Docker Compose 转换、依赖分析、自动凭证生成、compose_override、高级路由（upstreams/ingress）、文件处理器、硬件加速。默认 LPK v2 格式（package.yml + lzc-manifest.yml）。触发词：Docker Compose 转 LazyCat、发布应用到 LazyCat 商店、创建 LPK 包、管理 LazyCat 应用生命周期。
 preferences:
   - id: add_root_to_public_path
-    name: Add / to public_path
-    description: Automatically add "/" to application.public_path in the generated manifest
+    name: 添加 / 到 public_path
+    description: 自动在生成的 manifest 中添加 "/" 到 application.public_path
     type: boolean
     default: true
   - id: manifest_multilingual
-    name: Manifest Multilingual Support
-    description: Generate locales with both English and Chinese in manifest files
+    name: Manifest 多语言支持
+    description: 在 manifest 文件中生成中英文双语 locales
     type: boolean
     default: true
   - id: simple_app_optimization
-    name: Simple App Optimization
-    description: Skip lzc-deploy-params.yml generation for simple applications
+    name: 简单应用优化
+    description: 简单应用跳过 lzc-deploy-params.yml 生成
     type: boolean
     default: true
   - id: auto_healthcheck
-    name: Auto Healthcheck
-    description: Automatically add healthcheck configurations to services
+    name: 自动健康检查
+    description: 自动为服务添加健康检查配置
     type: boolean
     default: true
   - id: auto_resource_limits
-    name: Auto Resource Limits
-    description: Automatically add reasonable resource limits to services
+    name: 自动资源限制
+    description: 自动为服务添加合理的资源限制
     type: boolean
     default: true
   - id: minimal_docs
-    name: Minimal Documentation
-    description: Generate only README.md with essential info, skip other markdown files
+    name: 最简文档
+    description: 只生成 README.md，跳过其他 markdown 文件
     type: boolean
     default: true
   - id: background_task
-    name: Background Task Mode
-    description: Set application.background_task to true by default for long-running background services
+    name: 后台任务模式
+    description: 默认将 application.background_task 设为 true，适用于长时间运行的后台服务
     type: boolean
     default: false
   - id: package_prefix
-    name: Package Name Prefix
-    description: Default package name prefix for applications (community.lazycat.app, cloud.lazycat.app, or custom)
+    name: 包名前缀
+    description: 应用包名默认前缀（community.lazycat.app、cloud.lazycat.app 或自定义）
     type: string
     default: cloud.lazycat.app
   - id: generate_compose_override
-    name: Generate compose_override
-    description: Generate compose_override section in lzc-build.yml for unsupported Docker Compose parameters
+    name: 生成 compose_override
+    description: 在 lzc-build.yml 中为不支持的字段生成 compose_override 部分
     type: boolean
     default: true
   - id: passwordless_login
-    name: Passwordless Login Configuration
-    description: Automatically configure passwordless login for apps with password systems using injects
+    name: 免密登录配置
+    description: 为有密码体系的应用自动配置免密登录（使用 injects）
     type: boolean
     default: true
 ---
 
-# LazyCat App Publisher
+# LazyCat 应用发布助手
 
-This skill helps you convert Docker Compose files and Docker commands into LazyCat Cloud application configurations with **intelligent dependency analysis** and **automatic configuration optimization**.
+协助将 Docker Compose 文件和 Docker 命令转换为 LazyCat Cloud 应用配置，提供**智能依赖分析**和**自动配置优化**。
 
 ## Reference Documents
 
@@ -298,29 +298,29 @@ Help me publish this application to LazyCat Cloud:
 
 ---
 
-## Intelligent Analysis Logic
+## 智能分析逻辑
 
-### Service Classification
+### 服务分类
 
 ```python
 def classify_service(service_config):
     has_healthcheck = 'healthcheck' in service_config
     has_external_ports = 'ports' in service_config
 
-    # Internal service = has healthcheck + no external ports
+    # Internal 服务 = 有 healthcheck + 无外部端口
     if has_healthcheck and not has_external_ports:
-        return 'INTERNAL'  # Auto-configure
+        return 'INTERNAL'  # 自动配置
     else:
-        return 'EXTERNAL'  # User-configured
+        return 'EXTERNAL'  # 用户配置
 ```
 
-| Service | Health Check | External Ports | Type | Configuration |
-|---------|--------------|----------------|------|---------------|
-| PostgreSQL | ✅ | ❌ | Internal | Auto-generated password |
-| Redis | ✅ | ❌ | Internal | Auto-generated password |
-| Web App | ❌ | ✅ | External | User-configured |
+| 服务 | 健康检查 | 外部端口 | 类型 | 配置方式 |
+|------|---------|---------|------|---------|
+| PostgreSQL | ✅ | ❌ | Internal | 自动生成密码 |
+| Redis | ✅ | ❌ | Internal | 自动生成密码 |
+| Web App | ❌ | ✅ | External | 用户配置 |
 
-### Parameter Templates
+### 参数模板
 
 | 场景 | 推荐函数 | 示例 |
 |------|---------|------|
@@ -331,7 +331,7 @@ def classify_service(service_config):
 
 详见 [references/intelligent-analysis.md](references/intelligent-analysis.md)
 
-### Setup Wizard Constraints
+### Setup Wizard 约束
 
 生成 `lzc-deploy-params.yml` 时，**严格按照官方规范**：
 
@@ -572,7 +572,7 @@ application:
 
 ---
 
-## Best Practices
+## 最佳实践
 
 ### ✅ Do - LPK v2 完整示例（推荐，lzcos v1.5.0+）
 
@@ -673,7 +673,7 @@ locales:
       description: "默认登录密码"
 ```
 
-### ❌ Avoid - Common Mistakes
+### ❌ Avoid - 常见错误
 
 ```yaml
 # ❌ 将静态包元数据放在 lzc-manifest.yml（LPK v2 不允许）
@@ -741,7 +741,7 @@ application:
 
 ---
 
-## Development Workflow
+## 开发工作流
 
 ### 环境要求
 
@@ -756,42 +756,42 @@ npm install -g @lazycatcloud/lzc-cli
 npm install -g @lazycatcloud/lzc-cli@2.0.0
 ```
 
-### Quick Decision Table
+### 快速决策表
 
-| Your Goal | Use This |
-|-----------|----------|
-| Change UI with hot reload | `project deploy` + `npm run dev` |
-| Change backend code | `project deploy` + `project sync --watch` + `project exec` |
-| Build package for others | `project release` |
+| 目标 | 使用命令 |
+|------|---------|
+| UI 热更新 | `project deploy` + `npm run dev` |
+| 后端代码修改 | `project deploy` + `project sync --watch` + `project exec` |
+| 构建发布包 | `project release` |
 
-### Key Commands
+### 主要命令
 
 ```bash
-# Create project from template
+# 从模板创建项目
 lzc-cli project create myapp -t hello-vue
 
-# Deploy (uses lzc-build.dev.yml if exists, else lzc-build.yml)
+# 部署（有 lzc-build.dev.yml 则用，否则用 lzc-build.yml）
 lzc-cli project deploy
 
-# Deploy with release config
+# 使用 release 配置部署
 lzc-cli project deploy --release
 
-# Sync code (watch mode)
+# 同步代码（监听模式）
 lzc-cli project sync --watch
 
-# Enter container
+# 进入容器
 lzc-cli project exec /bin/sh
 
-# View logs
+# 查看日志
 lzc-cli project log -f
 
-# Build release package (LPK v2 by default with lzc-cli v2.0.0+)
+# 构建发布包（默认 LPK v2，需 lzc-cli v2.0.0+）
 lzc-cli project release -o app.lpk
 
-# Check LPK info
+# 查看 LPK 信息
 lzc-cli lpk info app.lpk
 
-# Publish to store
+# 发布到应用商店
 lzc-cli appstore publish app.lpk
 ```
 
@@ -799,44 +799,44 @@ lzc-cli appstore publish app.lpk
 
 ---
 
-## LPK v1 to v2 Migration
+## LPK v1 到 v2 迁移
 
-### Using the Converter Script
+### 使用转换脚本
 
-A Python script is provided to convert existing LPK v1 packages to v2 format:
+提供 Python 脚本将现有 LPK v1 包转换为 v2 格式：
 
 ```bash
-# Basic usage
+# 基本用法
 python scripts/lpk_v1_to_v2.py app.lpk
 
-# Specify output
+# 指定输出
 python scripts/lpk_v1_to_v2.py app.lpk new-app.lpk
 
-# Output to directory
+# 输出到目录
 python scripts/lpk_v1_to_v2.py app.lpk ./output/
 ```
 
-**What the converter does:**
-1. Extracts LPK v1 (zip format)
-2. Splits `manifest.yml` into:
-   - `package.yml` - static metadata (package, version, name, description, etc.)
-   - `manifest.yml` - runtime structure (application, services, ext_config)
-3. Repackages as LPK v2 (tar format)
+**转换器做什么：**
+1. 解压 LPK v1（zip 格式）
+2. 将 `manifest.yml` 拆分为：
+   - `package.yml` - 静态元数据（package, version, name, description 等）
+   - `manifest.yml` - 运行结构（application, services, ext_config）
+3. 重新打包为 LPK v2（tar 格式）
 
-**Requirements:**
+**依赖要求：**
 ```bash
 pip install pyyaml
 ```
 
-### Manual Migration
+### 手动迁移
 
-For simple cases, you can manually migrate:
+简单场景可以手动迁移：
 
 ```bash
-# 1. Extract v1
+# 1. 解压 v1
 unzip app.lpk -d temp/
 
-# 2. Create package.yml from manifest.yml static fields
+# 2. 从 manifest.yml 静态字段创建 package.yml
 cat > package.yml << 'EOF'
 package: your.app.id
 version: 1.0.0
@@ -845,9 +845,9 @@ description: App description
 min_os_version: 1.3.8
 EOF
 
-# 3. Remove static fields from manifest.yml (keep only application, services, ext_config, usage)
+# 3. 从 manifest.yml 移除静态字段（只保留 application, services, ext_config, usage）
 
-# 4. Repack as v2
+# 4. 重新打包为 v2
 tar -cf app-v2.lpk package.yml manifest.yml content.tar.gz META/
 ```
 
@@ -940,12 +940,12 @@ min_os_version: 1.5.0  # ✅ 必须设置
 
 ---
 
-## App Store Check (Automatic)
+## 应用商店检查（自动）
 
 每当用户请求转换或创建应用时，技能会**自动**检查懒猫应用商店中是否已存在同名应用：
 
 ```bash
-# Search API
+# 搜索 API
 GET https://search.lazycat.cloud/api/v1/app?keyword={app_name}&size=48
 ```
 
@@ -953,28 +953,28 @@ GET https://search.lazycat.cloud/api/v1/app?keyword={app_name}&size=48
 
 ---
 
-## Preferences
+## 偏好设置
 
-| Preference | Default | Description |
-|------------|---------|-------------|
-| Add / to public_path | true | 自动添加 "/" 到 public_path |
-| Manifest Multilingual | true | 生成中英文 locales |
-| Simple App Optimization | true | 简单应用跳过 params 生成 |
-| Auto Healthcheck | true | 自动添加 healthcheck |
-| Auto Resource Limits | true | 自动添加资源限制 |
-| Minimal Documentation | true | 只生成 README.md |
-| Background Task | false | 设置 background_task: true |
-| Package Prefix | cloud.lazycat.app | 包名前缀 |
-| Generate compose_override | true | 生成 compose_override |
-| Passwordless Login | true | **为密码体系应用自动配置免密登录** |
+| 偏好 | 默认值 | 说明 |
+|------|--------|------|
+| 添加 / 到 public_path | true | 自动添加 "/" 到 public_path |
+| Manifest 多语言 | true | 生成中英文 locales |
+| 简单应用优化 | true | 简单应用跳过 params 生成 |
+| 自动健康检查 | true | 自动添加 healthcheck |
+| 自动资源限制 | true | 自动添加资源限制 |
+| 最简文档 | true | 只生成 README.md |
+| 后台任务模式 | false | 设置 background_task: true |
+| 包名前缀 | cloud.lazycat.app | 包名前缀 |
+| 生成 compose_override | true | 生成 compose_override |
+| 免密登录 | true | **为密码体系应用自动配置免密登录** |
 
 ---
 
-## Examples
+## 示例
 
-### Example 1: Simple Web App
+### 示例 1：简单 Web 应用
 
-**Input (docker-compose.yml):**
+**输入（docker-compose.yml）：**
 ```yaml
 services:
   postgres:
@@ -995,26 +995,26 @@ services:
       - "3000:3000"
 ```
 
-**Output (Smart):**
+**输出（智能转换）：**
 ```yaml
 services:
   postgres:
     environment:
-      - POSTGRES_PASSWORD={{.INTERNAL.db_password}}  # Auto
+      - POSTGRES_PASSWORD={{.INTERNAL.db_password}}  # 自动
     healthcheck: {...}
 
   app:
     environment:
       - DATABASE_URL=postgresql://postgres:{{.INTERNAL.db_password}}@postgres:5432/app
-      - SECRET_KEY={{.U.secret_key}}  # User
+      - SECRET_KEY={{.U.secret_key}}  # 用户配置
 ```
 
 更多示例见 [references/docker-compose-examples.md](references/docker-compose-examples.md) 和 [references/real-world-examples.md](references/real-world-examples.md)
 
 ---
 
-## References
+## 参考资料
 
-- **Official Docs**: https://developer.lazycat.cloud
-- **Documentation Repository**: https://gitee.com/lazycatcloud/lzc-developer-doc
-- **App Store**: https://gitee.com/lazycatcloud/appdb
+- **官方文档**: https://developer.lazycat.cloud
+- **文档仓库**: https://gitee.com/lazycatcloud/lzc-developer-doc
+- **应用商店**: https://gitee.com/lazycatcloud/appdb
