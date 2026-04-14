@@ -239,23 +239,61 @@ lzc-cli appstore publish app.lpk
 
 ### Convert Docker Compose
 
+**输入格式**: Docker Compose YAML 文件路径或内容
+**输出格式**: LPK v2 包目录（package.yml + lzc-manifest.yml + lzc-build.yml）
+
 ```
 Convert this docker-compose.yml to LazyCat app format:
 [provide docker-compose.yml content or file path]
+
+示例输入：
+services:
+  web:
+    image: nginx:latest
+    ports:
+      - "80:80"
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_PASSWORD: mypassword
+
+预期输出：
+├── package.yml       # 包元数据
+├── lzc-manifest.yml  # 运行配置
+├── lzc-build.yml     # 构建配置
+└── icon.png          # 应用图标（需用户提供）
 ```
 
 ### Convert Docker Run
 
+**输入格式**: Docker Run 命令字符串
+**输出格式**: 同上（LPK v2）
+
 ```
 Convert this docker run command to LazyCat app:
-docker run -d -p 8080:80 -e APP_ENV=production --name myapp nginx
+docker run -d -p 8080:80 -e APP_ENV=production --name myapp nginx:latest
+
+解析规则：
+- -p → application.upstreams 或 ingress
+- -e → services.*.environment
+- -v → services.*.binds
+- --name → application.subdomain
 ```
 
 ### Publish to Store
 
+**输入格式**: LPK 包文件路径
+**输出**: 发布到应用商店，返回应用 ID
+
 ```
 Help me publish this application to LazyCat Cloud:
-[provide docker-compose.yml]
+[provide LPK package path or directory]
+
+步骤：
+1. 验证 LPK 包结构
+2. 确认应用商店无同名应用
+3. 执行 lzc-cli appstore publish
+4. 返回发布结果
 ```
 
 ---
