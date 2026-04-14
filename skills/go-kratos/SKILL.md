@@ -218,19 +218,8 @@ var Module = fx.Options(
 )
 ```
 
-Similarly for `biz.Module`, `data.Module`, `server.Module`:
-```go
-// cmd/server/main.go
-app := fx.New(
-    server.Module,
-    data.Module,
-    biz.Module,
-    service.Module,
-    appModule,
-)
-```
-
 同理适用于 `biz.Module`、`data.Module`、`server.Module`：
+
 ```go
 // cmd/server/main.go
 app := fx.New(
@@ -245,6 +234,17 @@ app := fx.New(
 ### 4. ResponseEncoder 示例
 
 ```go
+package server
+
+import (
+    "google.golang.org/protobuf/types/known/anypb"
+    
+    "github.com/go-kratos/kratos/v2/encoding"
+    "github.com/go-kratos/kratos/v2/transport/http"
+    
+    v1 "github.com/myorg/myproject/api/myservice/v1"
+)
+
 func CustomResponseEncoder() http.ServerOption {
     return http.ResponseEncoder(func(w http.ResponseWriter, r *http.Request, i interface{}) error {
         reply := &v1.BaseResponse{Code: 0}
@@ -272,6 +272,16 @@ func CustomResponseEncoder() http.ServerOption {
 ### 5. 从 Context 获取 JWT Payload
 
 ```go
+package middleware
+
+import (
+    "context"
+    "errors"
+    
+    jwtV4 "github.com/golang-jwt/jwt/v4"
+    "github.com/go-kratos/kratos/v2/middleware/auth/jwt"
+)
+
 func getPayloadFromCtx(ctx context.Context, partName string) (string, error) {
     if claims, ok := jwt.FromContext(ctx); ok {
         if m, ok := claims.(jwtV4.MapClaims); ok {
@@ -287,6 +297,15 @@ func getPayloadFromCtx(ctx context.Context, partName string) (string, error) {
 ### 6. 中间件骨架
 
 ```go
+package middleware
+
+import (
+    "context"
+    
+    "github.com/go-kratos/kratos/v2/middleware"
+    "github.com/go-kratos/kratos/v2/transport"
+)
+
 func MyMiddleware() middleware.Middleware {
     return func(handler middleware.Handler) middleware.Handler {
         return func(ctx context.Context, req interface{}) (reply interface{}, err error) {
@@ -305,17 +324,6 @@ func MyMiddleware() middleware.Middleware {
     }
 }
 ```
-
----
-
-## 这是 Kratos 项目吗？
-
-检查以下信号：
-- `buf.yaml` 或 `buf.gen.yaml` 存在
-- `internal/service/` 目录存在
-- `internal/biz/` 目录存在
-- `internal/data/` 目录存在
-- Go imports 包含 `github.com/go-kratos/kratos/v2`
 
 ---
 
