@@ -1,6 +1,6 @@
 ---
 name: lazycat-sdk-dev
-description: LazyCat SDK development skill for building applications with Go and JavaScript/TypeScript SDKs, including frontend client capabilities for iOS/Android WebShell. Use when developing apps that need to interact with LazyCat microservice system APIs, query app lists, manage devices, handle file pickers, use minidb, or access client-side capabilities like AppCommon, MediaSession, navigation bar meta, full screen control, file/media sharing, theme mode, and platform-specific features. Triggers when code imports @lazycatcloud/sdk, gitee.com/linakesi/lzc-sdk, or when user asks about LazyCat SDK, client WebShell, device management, app queries, frontend extensions, or system integration.
+description: LazyCat SDK development for Go/JS apps interacting with microservice APIs (users, devices, apps, box control). Includes frontend WebShell capabilities (AppCommon, MediaSession, theme, navigation). Triggers on @lazycatcloud/sdk imports, lzc-sdk references, or SDK/WebShell/device queries.
 ---
 
 # LazyCat SDK Development
@@ -79,12 +79,26 @@ const api = new lzcAPIGateway(window.location.origin, false)
 
 **⚠️ 检查点**: 如果是 HTTP Handler，必须传递用户上下文
 
-```go
-// 从 HTTP headers 提取
-userID := c.GetHeader("x-hc-user-id")
+**可用 Headers**:
 
-// 添加到 gRPC context
-ctx = metadata.AppendToOutgoingContext(ctx, "x-hc-user-id", userID)
+| Header | 格式 | 来源 |
+|--------|------|------|
+| `x-hc-user-id` | 字符串 (如 `lazycat`) | HTTP Header |
+| `x-hc-user-role` | `admin` 或 `user` | HTTP Header |
+| `x-hc-device-id` | 字符串 | HTTP Header |
+| `x-hc-device-version` | 版本号 (如 `1.5.0`) | HTTP Header |
+
+**示例**:
+```go
+// Gin 框架示例
+userID := c.GetHeader("x-hc-user-id")        // 必须是小写
+userRole := c.GetHeader("x-hc-user-role")
+
+// 添加到 gRPC context (metadata key 必须小写)
+ctx = metadata.AppendToOutgoingContext(ctx,
+    "x-hc-user-id", userID,
+    "x-hc-user-role", userRole,
+)
 ```
 
 #### Step 2.3: 编写业务代码
@@ -98,8 +112,23 @@ ctx = metadata.AppendToOutgoingContext(ctx, "x-hc-user-id", userID)
 
 #### Step 3.1: 添加超时控制
 
+**推荐超时值**:
+
+| 操作类型 | 推荐超时 | 原因 |
+|---------|---------|------|
+| 设备列表查询 | 10s | 网络可能慢 |
+| 用户信息查询 | 5s | 快速操作 |
+| 应用状态变更 | 30s | 涉及容器操作 |
+| 设备控制(LED/重启) | 15s | 需要硬件响应 |
+
+**示例**:
 ```go
+// 查询类操作
 ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+defer cancel()
+
+// 状态变更类操作
+ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 defer cancel()
 ```
 
