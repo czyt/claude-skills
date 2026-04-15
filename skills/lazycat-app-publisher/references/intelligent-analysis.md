@@ -157,7 +157,7 @@ def detect_param_type(service_type, key, value):
 
     if is_sensitive and uses_env_var:
         if service_type == 'INTERNAL':
-            return 'AUTO_GENERATED'  # {{.INTERNAL.xxx}}
+            return 'AUTO_GENERATED'  # {{ stable_secret "xxx" }}
         else:
             return 'USER_CONFIG'     # {{.U.xxx}}
     elif is_sensitive and not uses_env_var:
@@ -210,14 +210,14 @@ services:
     environment:
       - POSTGRES_DB=aether
       - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD={{.INTERNAL.db_password}}  # ✅ Auto-generated
+      - POSTGRES_PASSWORD={{ stable_secret "db_password" }}  # ✅ Auto-generated
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
     # No user configuration needed!
 
   redis:
     image: redis:7-alpine
-    command: redis-server --appendonly yes --requirepass {{.INTERNAL.redis_password}}  # ✅ Auto-generated
+    command: redis-server --appendonly yes --requirepass {{ stable_secret "redis_password" }}  # ✅ Auto-generated
     healthcheck:
       test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
     # No user configuration needed!
@@ -225,8 +225,8 @@ services:
   app:
     image: myapp:latest
     environment:
-      - DATABASE_URL=postgresql://postgres:{{.INTERNAL.db_password}}@postgres:5432/aether
-      - REDIS_URL=redis://:{{.INTERNAL.redis_password}}@redis:6379/0
+      - DATABASE_URL=postgresql://postgres:{{ stable_secret "db_password" }}@postgres:5432/aether
+      - REDIS_URL=redis://:{{ stable_secret "redis_password" }}@redis:6379/0
       - JWT_SECRET_KEY={{.U.jwt_secret_key}}  # ✅ User config
       - ADMIN_PASSWORD={{.U.admin_password}}  # ✅ User config
     depends_on:
@@ -333,13 +333,13 @@ services:
   db:
     image: postgres:15
     environment:
-      - POSTGRES_PASSWORD={{.INTERNAL.db_password}}  # Auto
+      - POSTGRES_PASSWORD={{ stable_secret "db_password" }}  # Auto
     healthcheck: {...}
 
   web:
     image: myapp:latest
     environment:
-      - DATABASE_URL=postgresql://db:{{.INTERNAL.db_password}}@db:5432/app
+      - DATABASE_URL=postgresql://db:{{ stable_secret "db_password" }}@db:5432/app
       - SECRET_KEY={{.U.secret_key}}  # User config
     depends_on: [db]
 
@@ -393,15 +393,15 @@ services:
 services:
   postgres:
     environment:
-      - POSTGRES_PASSWORD={{.INTERNAL.db_password}}  # Auto
+      - POSTGRES_PASSWORD={{ stable_secret "db_password" }}  # Auto
 
   redis:
-    command: redis-server --requirepass {{.INTERNAL.redis_password}}  # Auto
+    command: redis-server --requirepass {{ stable_secret "redis_password" }}  # Auto
 
   backend:
     environment:
-      - DB_URL=postgresql://postgres:{{.INTERNAL.db_password}}@postgres:5432/app
-      - REDIS_URL=redis://:{{.INTERNAL.redis_password}}@redis:6379/0
+      - DB_URL=postgresql://postgres:{{ stable_secret "db_password" }}@postgres:5432/app
+      - REDIS_URL=redis://:{{ stable_secret "redis_password" }}@redis:6379/0
       - JWT_SECRET={{.U.jwt_secret}}  # User
 
   frontend:
@@ -424,7 +424,7 @@ is_internal = all([
 ### 2. Parameter Mapping
 ```yaml
 # Internal + Sensitive + Env Var → Auto-generated
-POSTGRES_PASSWORD=${DB_PASSWORD} → {{.INTERNAL.db_password}}
+POSTGRES_PASSWORD=${DB_PASSWORD} → {{ stable_secret "db_password" }}
 
 # External + Sensitive + Env Var → User config
 JWT_SECRET=${JWT_SECRET} → {{.U.jwt_secret}}
@@ -558,11 +558,11 @@ Convert this docker-compose.yml with smart dependency analysis:
 ### Method 2: Manual Optimization
 
 ```yaml
-# Use {{.INTERNAL.xxx}} for internal services
+# Use {{ stable_secret "xxx" }} for internal services
 services:
   db:
     environment:
-      - PASSWORD={{.INTERNAL.db_password}}
+      - PASSWORD={{ stable_secret "db_password" }}
 
 # Use {{.U.xxx}} for user configuration
 services:

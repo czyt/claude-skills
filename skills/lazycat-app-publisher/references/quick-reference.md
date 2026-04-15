@@ -100,7 +100,7 @@ services:
   postgres:
     image: postgres:15
     environment:
-      - POSTGRES_PASSWORD={{.INTERNAL.db_password}}
+      - POSTGRES_PASSWORD={{ stable_secret "db_password" }}
     healthcheck:  # ✅ 无下划线
       test:
         - CMD-SHELL
@@ -115,7 +115,7 @@ services:
   app:
     image: myapp:latest
     environment:
-      - DATABASE_URL=postgresql://postgres:{{.INTERNAL.db_password}}@postgres:5432/app
+      - DATABASE_URL=postgresql://postgres:{{ stable_secret "db_password" }}@postgres:5432/app
       - SECRET_KEY={{.U.secret_key}}
     depends_on:
       - postgres
@@ -229,7 +229,7 @@ services:
   app:
     environment:
       # 内部服务（自动生成）
-      - DB_PASSWORD={{.INTERNAL.db_password}}
+      - DB_PASSWORD={{ stable_secret "db_password" }}
 
       # 用户配置
       - JWT_SECRET={{.U.jwt_secret}}
@@ -431,7 +431,7 @@ locales:
 - [ ] 不使用相对路径或绝对路径
 
 ### 安全配置
-- [ ] 内部服务使用 `{{.INTERNAL.xxx}}`
+- [ ] 内部服务使用 `{{ stable_secret "seed" }}`
 - [ ] 用户配置使用 `{{.U.xxx}}`
 - [ ] 不硬编码敏感信息
 

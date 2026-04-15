@@ -760,8 +760,8 @@ services:
 
 ```yaml
 # 内部服务变量（自动生成）
-{{.INTERNAL.db_password}}
-{{.INTERNAL.redis_password}}
+{{ stable_secret "db_password" }}
+{{ stable_secret "redis_password" }}
 
 # 用户配置变量
 {{.U.jwt_secret}}
@@ -1016,9 +1016,9 @@ services:
   postgres:
     image: postgres:15
     environment:
-      - POSTGRES_DB={{.INTERNAL.db_name}}
-      - POSTGRES_USER={{.INTERNAL.db_user}}
-      - POSTGRES_PASSWORD={{.INTERNAL.db_password}}
+      - POSTGRES_DB={{ stable_secret "db_name" }}
+      - POSTGRES_USER={{ stable_secret "db_user" }}
+      - POSTGRES_PASSWORD={{ stable_secret "db_password" }}
     cpu_shares: 512
     mem_limit: 2048M
     binds:
@@ -1032,7 +1032,7 @@ services:
 
   redis:
     image: redis:7-alpine
-    command: redis-server --requirepass {{.INTERNAL.redis_password}} --appendonly yes
+    command: redis-server --requirepass {{ stable_secret "redis_password" }} --appendonly yes
     cpu_shares: 256
     mem_limit: 512M
     binds:
@@ -1045,8 +1045,8 @@ services:
   api:
     image: aiimagegen-api:latest
     environment:
-      - DATABASE_URL=postgresql://{{.INTERNAL.db_user}}:{{.INTERNAL.db_password}}@postgres.lzcapp:5432/{{.INTERNAL.db_name}}
-      - REDIS_URL=redis://:{{.INTERNAL.redis_password}}@redis.lzcapp:6379/0
+      - DATABASE_URL=postgresql://{{ stable_secret "db_user" }}:{{ stable_secret "db_password" }}@postgres.lzcapp:5432/{{ stable_secret "db_name" }}
+      - REDIS_URL=redis://:{{ stable_secret "redis_password" }}@redis.lzcapp:6379/0
       - JWT_SECRET={{.U.jwt_secret}}
       - ADMIN_PASSWORD={{.U.admin_password}}
       - GPU_ENABLED={{.U.gpu_enabled}}
@@ -1171,7 +1171,7 @@ compose_override:
   - [ ] 不使用相对路径或绝对路径
 
 - [ ] **安全配置**
-  - [ ] 使用 `{{.INTERNAL.xxx}}` 生成内部密码
+  - [ ] 使用 `{{ stable_secret "seed" }}` 生成内部密码
   - [ ] 使用 `{{.U.xxx}}` 处理用户配置
   - [ ] 不硬编码敏感信息
   - [ ] 避免使用 `privileged: true`

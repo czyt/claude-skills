@@ -1,0 +1,17 @@
+[
+  {
+    "id": 1,
+    "prompt": "将这个docker-compose.yml转换为LazyCat LPK格式:\nservices:\n  postgres:\n    image: postgres:15\n    environment:\n      POSTGRES_PASSWORD: mypassword\n    healthcheck:\n      test: ['CMD-SHELL', 'pg_isready -U postgres']\n  web:\n    image: nginx:latest\n    ports:\n      - '80:80'",
+    "expected": "生成package.yml + lzc-manifest.yml + lzc-build.yml，使用stable_secret模板语法生成密码"
+  },
+  {
+    "id": 2,
+    "prompt": "解释LazyCat应用中如何配置数据库密码自动生成",
+    "expected": "准确说明使用{{ stable_secret \"seed\" }}模板语法，不提及.INTERNAL"
+  },
+  {
+    "id": 3,
+    "prompt": "列出LazyCat运行时注入的环境变量有哪些",
+    "expected": "准确列出LAZYCAT_APP_DOMAIN, LAZYCAT_APP_ID等官方文档中的环境变量"
+  }
+]

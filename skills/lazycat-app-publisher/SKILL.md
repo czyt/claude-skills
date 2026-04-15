@@ -186,7 +186,7 @@ services:
   db:
     image: postgres:15
     environment:
-      - POSTGRES_PASSWORD={{.INTERNAL.db_password}}  # Internal 服务自动配置
+      - POSTGRES_PASSWORD={{ stable_secret "db_password" }}  # 使用 stable_secret 自动生成稳定密码
 ```
 
 #### Step 2.3: 生成 lzc-build.yml（构建配置）
@@ -324,12 +324,12 @@ def classify_service(service_config):
 
 | 场景 | 推荐函数 | 示例 |
 |------|---------|------|
-| 内部服务密码 | `{{.INTERNAL.xxx}}` | `{{.INTERNAL.db_password}}` |
-| 用户必须配置 | `{{.U.xxx}}` | `{{.U.jwt_secret_key}}` |
-| 稳定密钥 | `{{ stable_secret "seed"}}` | `{{ stable_secret "api_key"}}` |
+| 内部服务密码 | `{{ stable_secret "seed" }}` | `{{ stable_secret "db_password" }}` |
+| 用户必须配置 | `{{ .U.xxx }}` 或 `{{ index .U "xxx" }}` | `{{ .U.jwt_secret_key }}` |
+| 系统参数 | `{{ .S.Xxx }}` | `{{ .S.AppDomain }}` |
 | 运行时变量 | `${LAZYCAT_*}` | `${LAZYCAT_APP_ID}` |
 
-详见 [references/intelligent-analysis.md](references/intelligent-analysis.md)
+详见 [references/intelligent-analysis.md](references/intelligent-analysis.md) 和官方文档 [advanced-manifest-render.md](https://developer.lazycat.cloud/docs/advanced-manifest-render)
 
 ### Setup Wizard 约束
 
@@ -625,7 +625,7 @@ services:
   postgres:
     image: postgres:15
     environment:
-      - POSTGRES_PASSWORD={{.INTERNAL.db_password}}
+      - POSTGRES_PASSWORD={{ stable_secret "db_password" }}
     healthcheck:  # ✅ v1.4.1: 使用 'healthcheck' (无下划线)
       test:
         - CMD-SHELL
@@ -721,7 +721,7 @@ application:
 
 # ❌ 硬编码密钥
 environment:
-  - PASSWORD=secret123  # 使用 {{.U.password}} 或 {{.INTERNAL.xxx}}
+  - PASSWORD=secret123  # 使用 {{ .U.password }} 或 {{ stable_secret "xxx" }}
 
 # ❌ v1.5.0+ 使用旧文档路径
 binds:
@@ -1000,12 +1000,12 @@ services:
 services:
   postgres:
     environment:
-      - POSTGRES_PASSWORD={{.INTERNAL.db_password}}  # 自动
+      - POSTGRES_PASSWORD={{ stable_secret "db_password" }}  # 自动
     healthcheck: {...}
 
   app:
     environment:
-      - DATABASE_URL=postgresql://postgres:{{.INTERNAL.db_password}}@postgres:5432/app
+      - DATABASE_URL=postgresql://postgres:{{ stable_secret "db_password" }}@postgres:5432/app
       - SECRET_KEY={{.U.secret_key}}  # 用户配置
 ```
 

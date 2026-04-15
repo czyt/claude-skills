@@ -34,7 +34,7 @@ services:
   postgres:
     image: postgres:15
     environment:
-      - POSTGRES_PASSWORD={{.INTERNAL.db_password}}
+      - POSTGRES_PASSWORD={{ stable_secret "db_password" }}
     healthcheck:  # ✅ v1.4.1: 无下划线，与 Docker Compose 兼容
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 30s
@@ -46,7 +46,7 @@ services:
 
   redis:
     image: redis:7-alpine
-    command: redis-server --requirepass {{.INTERNAL.redis_password}}
+    command: redis-server --requirepass {{ stable_secret "redis_password" }}
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 30s
@@ -57,8 +57,8 @@ services:
   app:
     image: myapp:latest
     environment:
-      - DATABASE_URL=postgresql://postgres:{{.INTERNAL.db_password}}@postgres:5432/app
-      - REDIS_URL=redis://:{{.INTERNAL.redis_password}}@redis:6379/0
+      - DATABASE_URL=postgresql://postgres:{{ stable_secret "db_password" }}@postgres:5432/app
+      - REDIS_URL=redis://:{{ stable_secret "redis_password" }}@redis:6379/0
       - SECRET_KEY={{.U.secret_key}}
     depends_on:
       - postgres
@@ -102,7 +102,7 @@ services:
 # ✅ 正确 - 简单命令
 services:
   redis:
-    command: redis-server --requirepass {{.INTERNAL.redis_password}}
+    command: redis-server --requirepass {{ stable_secret "redis_password" }}
 ```
 
 **注意事项：**
@@ -342,7 +342,7 @@ services:
 - [ ] 服务使用 `healthcheck`（无下划线）
 - [ ] 应用使用 `health_check.test_url`（带下划线）
 - [ ] 推荐使用 `upstreams` 代替 `routes`
-- [ ] 内部服务参数使用 `{{.INTERNAL.xxx}}`
+- [ ] 内部服务参数使用 `{{ stable_secret "seed" }}`
 - [ ] 用户配置参数使用 `{{.U.xxx}}`
 - [ ] ⚠️ **`command` 字段必须是字符串**（不能是数组）
 - [ ] `sleep` 命令使用纯数字（如 `sleep 15`，不要 `sleep 15s`）
@@ -354,7 +354,7 @@ services:
 
 LazyCat 支持多种模板函数，用于生成动态值和安全配置。
 
-### 1. 内部服务模板 ({{.INTERNAL.xxx}})
+### 1. 内部服务模板 ({{ stable_secret "seed" }})
 
 **用途：** 自动生成内部服务的敏感配置（密码、密钥等）
 
@@ -362,9 +362,9 @@ LazyCat 支持多种模板函数，用于生成动态值和安全配置。
 services:
   postgres:
     environment:
-      - POSTGRES_PASSWORD={{.INTERNAL.db_password}}  # 自动生成
+      - POSTGRES_PASSWORD={{ stable_secret "db_password" }}  # 自动生成
   redis:
-    command: redis-server --requirepass {{.INTERNAL.redis_password}}  # 自动生成
+    command: redis-server --requirepass {{ stable_secret "redis_password" }}  # 自动生成
 ```
 
 **特性：**
@@ -461,13 +461,13 @@ services:
 
 | 函数 | 用途 | 稳定性 | 适用场景 |
 |------|------|--------|----------|
-| `{{.INTERNAL.xxx}}` | 内部服务密码 | 自动管理 | 数据库、Redis |
+| `{{ stable_secret "seed" }}` | 内部服务密码 | 自动管理 | 数据库、Redis |
 | `{{.U.xxx}}` | 用户配置 | 用户输入 | JWT密钥、管理员密码 |
 | `${LAZYCAT_*}` | 运行时变量 | 系统注入 | 应用ID、URL |
 | `{{ stable_secret "seed"}}` | 稳定密钥 | 种子决定 | API密钥、加密密钥 |
 
 **💡 最佳实践：**
-- 内部服务密码 → 使用 `{{.INTERNAL.xxx}}`
+- 内部服务密码 → 使用 `{{ stable_secret "seed" }}`
 - 需要稳定的密钥 → 使用 `{{ stable_secret "seed"}}`
 - 用户必须配置的 → 使用 `{{.U.xxx}}`
 - 运行时信息 → 使用 `${LAZYCAT_*}`
@@ -622,7 +622,7 @@ services:
   postgres:
     image: postgres:15
     environment:
-      - POSTGRES_PASSWORD={{.INTERNAL.db_password}}
+      - POSTGRES_PASSWORD={{ stable_secret "db_password" }}
     user: "999"
     cpu_shares: 512
     mem_limit: 1024M
@@ -801,7 +801,7 @@ locales:
 
 | 函数 | 用途 |
 |------|------|
-| `{{.INTERNAL.xxx}}` | 内部服务密码 |
+| `{{ stable_secret "seed" }}` | 内部服务密码 |
 | `{{.U.xxx}}` | 用户配置参数 |
 | `{{ stable_secret "seed"}}` | 稳定密钥生成 |
 

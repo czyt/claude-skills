@@ -635,7 +635,7 @@ LazyCat 系统自动注入的环境变量：
 
 ## 4. 模板函数
 
-### 4.1 内部服务模板 ({{.INTERNAL.xxx}})
+### 4.1 内部服务模板 ({{ stable_secret "seed" }})
 
 自动生成内部服务的敏感配置：
 
@@ -643,7 +643,7 @@ LazyCat 系统自动注入的环境变量：
 services:
   postgres:
     environment:
-      - POSTGRES_PASSWORD={{.INTERNAL.db_password}}
+      - POSTGRES_PASSWORD={{ stable_secret "db_password" }}
 ```
 
 ### 4.2 用户配置模板 ({{.U.xxx}})

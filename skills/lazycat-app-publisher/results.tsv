@@ -1,0 +1,2 @@
+timestamp	commit	skill	old_score	new_score	status	dimension	note	eval_mode
+2026-04-15T10:00	baseline	lazycat-app-publisher	-	46	baseline	-	初始评估：核心模板语法{{.INTERNAL.xxx}}为幻觉，应为{{ stable_secret "xxx" }}	dry_run
