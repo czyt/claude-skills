@@ -1,17 +1,35 @@
-[
-  {
-    "id": 1,
-    "prompt": "将这个docker-compose.yml转换为LazyCat LPK格式:\nservices:\n  postgres:\n    image: postgres:15\n    environment:\n      POSTGRES_PASSWORD: mypassword\n    healthcheck:\n      test: ['CMD-SHELL', 'pg_isready -U postgres']\n  web:\n    image: nginx:latest\n    ports:\n      - '80:80'",
-    "expected": "生成package.yml + lzc-manifest.yml + lzc-build.yml，使用stable_secret模板语法生成密码"
-  },
-  {
-    "id": 2,
-    "prompt": "解释LazyCat应用中如何配置数据库密码自动生成",
-    "expected": "准确说明使用{{ stable_secret \"seed\" }}模板语法，不提及.INTERNAL"
-  },
-  {
-    "id": 3,
-    "prompt": "列出LazyCat运行时注入的环境变量有哪些",
-    "expected": "准确列出LAZYCAT_APP_DOMAIN, LAZYCAT_APP_ID等官方文档中的环境变量"
-  }
-]
+{
+  "skill_name": "lazycat-app-publisher",
+  "evals": [
+    {
+      "id": 1,
+      "name": "simple-web-app",
+      "prompt": "把下面这个 docker-compose.yml 转换成 LazyCat LPK v2 格式：\n\nservices:\n  web:\n    image: nginx:latest\n    ports:\n      - \"80:80\"\n    volumes:\n      - ./html:/usr/share/nginx/html",
+      "expected": "生成 package.yml + lzc-manifest.yml + lzc-build.yml，包含 upstreams 配置，volume 映射到 /lzcapp/var"
+    },
+    {
+      "id": 2,
+      "name": "multi-service-with-db",
+      "prompt": "转换这个有数据库的多服务 docker-compose：\n\nservices:\n  postgres:\n    image: postgres:15\n    environment:\n      POSTGRES_PASSWORD: mypassword\n    healthcheck:\n      test: [\"CMD-SHELL\", \"pg_isready -U postgres\"]\n    volumes:\n      - pgdata:/var/lib/postgresql/data\n\n  app:\n    image: myapp:latest\n    environment:\n      DATABASE_URL: postgresql://postgres:mypassword@postgres:5432/app\n    depends_on:\n      - postgres\n    ports:\n      - \"3000:3000\"",
+      "expected": "正确识别 postgres 为 Internal 服务，使用 {{.INTERNAL.db_password}}，生成免密登录配置（如果 app 有密码体系）"
+    },
+    {
+      "id": 3,
+      "name": "github-author-extraction",
+      "prompt": "创建一个 LazyCat 应用，homepage 是 https://github.com/louislam/uptime-kuma，应用名是 Uptime Kuma",
+      "expected": "package.yml 中 author 字段自动填入 'louislam'（从 GitHub URL 提取）"
+    },
+    {
+      "id": 4,
+      "name": "docker-run-conversion",
+      "prompt": "把这个 docker run 命令转成 LazyCat 格式：\ndocker run -d -p 8080:80 -e API_KEY=secret123 -v /data:/app/data --name myweb nginx:latest",
+      "expected": "解析 -p/-e/-v/--name，生成对应的 upstreams、environment、binds、subdomain 配置"
+    },
+    {
+      "id": 5,
+      "name": "password-app-check",
+      "prompt": "转换这个有密码的应用：\n\nservices:\n  admin-panel:\n    image: admin-panel:latest\n    environment:\n      ADMIN_PASSWORD: ${ADMIN_PASS}\n      SECRET_KEY: ${SECRET}\n    ports:\n      - \"80:80\"",
+      "expected": "检测到密码体系，询问用户免密登录方案，生成 injects 配置"
+    }
+  ]
+}

@@ -345,7 +345,7 @@ services:
   web:
     image: myapp:latest
     environment:
-      - DATABASE_URL=postgresql://postgres:{{ stable_secret "db_password" }}@postgres:5432/app
+      - DATABASE_URL=postgresql://postgres:{{.INTERNAL.db_password}}@postgres:5432/app
     healthcheck:
       test:
         - CMD-SHELL
@@ -357,7 +357,7 @@ services:
   postgres:
     image: postgres:15
     environment:
-      - POSTGRES_PASSWORD={{ stable_secret "db_password" }}
+      - POSTGRES_PASSWORD={{.INTERNAL.db_password}}
     binds:
       - /lzcapp/var/db:/var/lib/postgresql/data
     healthcheck:
@@ -409,7 +409,7 @@ ext_config:
 services:
   redis:
     image: redis:7-alpine
-    command: redis-server --requirepass {{ stable_secret "redis_password" }}  # ✅ 字符串
+    command: redis-server --requirepass {{.INTERNAL.redis_password}}  # ✅ 字符串
     healthcheck:  # ✅ 无下划线
       test:
         - CMD
@@ -495,6 +495,9 @@ services:
 - [ ] LPK v2 格式必须 `min_os_version: 1.5.0` 或更高
 - [ ] 不包含运行结构字段（application, services 等）
 - [ ] 包名格式正确（如 `cloud.lazycat.app.xxx`）
+- [ ] `author` 字段已自动填入（优先级：用户指定 > GitHub URL 提取 > 应用名+Team）
+  - 如果 `homepage` 是 GitHub URL，author 应为 GitHub 用户名
+  - 如果无 GitHub URL，author 应为 `应用名 Team`
 
 ### lzc-manifest.yml 检查清单（LPK v2）
 
