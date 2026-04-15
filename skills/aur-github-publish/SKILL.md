@@ -1,6 +1,6 @@
 ---
 name: aur-github-publish
-description: AUR GitHub 发布助手 - 自动更新 PKGBUILD 版本、发布到 GitHub 仓库并同步到 AUR。支持手动版本输入、自动版本检测、pkgrel bump、多架构支持（x86_64/aarch64）、deb/rpm/tar.gz 包处理。触发词：更新 AUR 包、发布到 AUR、创建 PKGBUILD、更新 Arch Linux 包、AUR 自动发布。
+description: AUR GitHub 发布助手 - 自动更新 PKGBUILD 版本、发布到 GitHub 仓库并同步到 AUR。支持手动版本输入、自动版本检测、pkgrel bump、多架构支持（x86_64/aarch64）、deb/rpm/tar.gz 包处理。包含四种包类型命名规则（-bin/-git/无后缀/-font）。触发词：更新 AUR 包、发布到 AUR、创建 PKGBUILD、更新 Arch Linux 包、AUR 自动发布。
 ---
 
 # AUR GitHub 发布助手
@@ -38,6 +38,105 @@ aur-repo/
 │       └── prune-aur-workdir.sh
 └── README.md
 ```
+
+---
+
+## 类型分类与命名规则
+
+### 四种类型自动判断
+
+| 类型特征 | 命名后缀 | 构建方式 | 判断依据 |
+|---------|---------|---------|---------|
+| **Binary (-bin)** | `{name}-bin` | 直接安装预编译二进制 | 上游提供预编译二进制文件 |
+| **VCS (-git)** | `{name}-git` | 从 Git 源码构建 | 用户需要最新开发版本 |
+| **Source** | `{name}` | 从稳定源码版本构建 | 上游只提供源码，用户需要稳定版 |
+| **Font** | `{name}-font` 或 `font-{name}` | 安装字体文件 | 字体文件 (.ttf/.otf) |
+
+### ⚠️ 关键判断点
+
+**询问用户**：
+```
+「请确认包类型：
+- 预编译二进制 → {name}-bin（推荐，最常用）
+- Git 开发版 → {name}-git（持续构建最新版）
+- 稳定源码版 → {name}（无后缀，从源码编译）
+- 字体文件 → {name}-font 或 font-{name}
+
+该软件属于哪种类型？」
+```
+
+### 命名规则详解
+
+#### Binary 包 (-bin) ⭐ 推荐
+
+**适用场景**: 上游 GitHub Releases 提供预编译二进制
+
+```bash
+pkgname=myapp-bin        # ✅ 必须有 -bin 后缀
+provides=('myapp')       # 提供 myapp 虚包
+conflicts=('myapp')      # 与源码版冲突
+```
+
+**命名示例**:
+- ✅ `opencli-bin`（预编译 CLI）
+- ✅ `vscode-bin`（预编译应用）
+- ✅ `nodejs-bin`（预编译运行时）
+- ❌ `opencli`（缺少 -bin 后缀，会被认为是源码包）
+
+#### VCS 包
+
+**适用场景**: 用户需要最新开发版本，上游无稳定 Release
+
+```bash
+pkgname=myapp-git        # ✅ 必须有 -git 后缀
+source=("git+${url}")    # Git 源码
+provides=('myapp')       # 提供虚包
+conflicts=('myapp')      # 与其他版本冲突
+```
+
+**命名示例**:
+- ✅ `neovim-git`（最新开发版）
+- ✅ `rust-git`（最新编译器）
+- ❌ `neovim-dev`（错误后缀，应使用 -git）
+
+#### Source 包（无后缀）
+
+**适用场景**: 上游只提供源码 tarball，需编译
+
+```bash
+pkgname=myapp            # ✅ 无后缀
+source=("${url}/releases/download/v${pkgver}/${source}.tar.gz")
+```
+
+**命名示例**:
+- ✅ `gcc`（从源码编译）
+- ✅ `python`（从源码编译）
+- ❌ `gcc-bin`（如果实际是从源码编译）
+
+#### Font 包
+
+**适用场景**: 字体文件 (.ttf/.otf)
+
+```bash
+pkgname=myfont-font      # ✅ 或 font-myfont
+arch=('any')             # 字体不依赖架构
+depends=('fontconfig')   # 通常依赖 fontconfig
+source=("${url}/font.ttf")
+```
+
+**命名示例**:
+- ✅ `fira-code-font`
+- ✅ `font-source-code-pro`
+- ❌ `fira-code`（缺少 font 标识）
+
+### 类型判断决策表
+
+| 上游发布文件格式 | 推荐类型 | PKGBUILD 特征 |
+|----------------|---------|--------------|
+| 预编译二进制 (.exe/.AppImage/静态二进制) | **-bin** | 直接 `install -Dm755` |
+| tar.gz 源码包 | **Source (无后缀)** | 需要 `build()` 函数 |
+| Git 仓库（无 release） | **-git** | `source=("git+${url}")` |
+| .ttf/.otf 字体文件 | **-font** | `arch=('any')` |
 
 ---
 
@@ -330,7 +429,22 @@ git push origin master
 ### Phase 1: 信息收集与前置检查
 
 **输入**: 用户请求（创建/更新 PKGBUILD）
-**输出**: 上游仓库信息 + AUR 仓库状态确认
+**输出**: 包类型确认 + 上游仓库信息 + AUR 仓库状态确认
+
+#### Step 1.0: 确认包类型
+
+**⚠️ 关键检查点**: 确认包类型决定了命名规则和 PKGBUILD 结构
+
+```
+询问用户：
+「请确认包类型：
+- 预编译二进制 → {name}-bin（推荐，直接安装）
+- Git 开发版 → {name}-git（从源码构建最新版）
+- 稳定源码版 → {name}（无后缀，从源码编译）
+- 字体文件 → {name}-font 或 font-{name}
+
+该软件属于哪种类型？」
+```
 
 #### Step 1.1: 确认上游仓库信息
 
@@ -342,7 +456,12 @@ git push origin master
 | 发布文件格式 | deb、tar.gz、二进制等 | 分析 GitHub Releases |
 | 架构支持 | x86_64、aarch64 或两者 | 分析发布文件命名 |
 | 包名称 | 用于 pkgname（推荐 `-bin` 后缀） | 用户确认 |
-| 运行时依赖 | depends 列表 | 分析应用文档或询问 |
+| 运行时依赖 | depends 列表 | 使用 ldd/namcap 探测或询问 |
+
+**依赖探测工具推荐**:
+- `ldd <binary>` - 查看动态链接库依赖
+- `objdump -p <binary> | grep NEEDED` - 查看需要的动态库
+- `namcap PKGBUILD` - 验证依赖声明是否正确
 
 ```
 询问用户：
@@ -351,7 +470,7 @@ git push origin master
 - 发布文件格式: {format}
 - 架构支持: {archs}
 - 包名称: {pkgname}-bin
-- 运行时依赖: {depends}
+- 运行时依赖: {depends}（可使用 ldd 探测）
 
 是否正确？」
 ```
@@ -480,12 +599,134 @@ git push
 
 | 场景 | 决策 |
 |------|------|
-| 用户未提供包名后缀 | **推荐**: 使用 `-bin` 后缀 |
+| **包类型判断** | **必须询问**: -bin/-git/无后缀/-font？ |
+| 用户未提供包名后缀 | **推荐**: 使用 `-bin` 后缀（预编译包最常见） |
 | AUR 包是否已存在 | **必须检查**: curl AUR API 或询问用户 |
 | checksum 是否预填 | **使用 SKIP**: workflow 通过 updpkgsums 计算 |
 | 是否需要 .install 文件 | **可选**: 有 post_install 钩子时添加 |
 | 定时更新频率 | **推荐**: 每12小时 (`0 */12 * * *`) |
 | Secrets 是否配置 | **首次提示**: 需配置 AUR_USERNAME/AUR_EMAIL/AUR_SSH_PRIVATE_KEY |
+| 字体包架构 | **使用**: `arch=('any')`（字体不依赖架构） |
+
+---
+
+## 依赖项探测工具
+
+### 1. ldd - 动态链接库依赖
+
+**适用场景**: 分析预编译二进制文件的动态链接库依赖
+
+```bash
+# 查看二进制的动态依赖
+ldd /path/to/binary
+
+# 示例输出：
+# linux-vdso.so.1 (0x00007ff...)
+# libc.so.6 => /usr/lib/libc.so.6 (0x00007f...)
+# libpthread.so.0 => /usr/lib/libpthread.so.0 (0x00007f...)
+```
+
+**⚠️ 注意**: `ldd` 只显示动态链接库，不包含其他依赖（如 Python 模块、字体等）。
+
+### 2. namcap - PKGBUILD 依赖分析
+
+**⭐ 推荐**: `namcap` 是 AUR 官方验证工具，能自动检测缺失的依赖和冗余依赖
+
+```bash
+# 安装 namcap
+sudo pacman -S namcap
+
+# 分析 PKGBUILD
+namcap PKGBUILD
+
+# 分析已构建的包
+namcap {pkgname}-{version}-1-x86_64.pkg.tar.zst
+
+# 示例输出：
+# PKGBUILD (myapp-bin): W: Dependency glibc detected but not declared
+# PKGBUILD (myapp-bin): W: Dependency libopenssl detected but not declared
+```
+
+**namcap 检测类型**:
+- 缺失依赖（未声明但二进制需要）
+- 冗余依赖（已声明但实际不需要）
+- 架构不匹配（如 `arch=('x86_64')` 但二进制是 `aarch64`）
+
+### 3. objdump - 深度分析
+
+**适用场景**: 查看 NEEDED 动态库列表（比 ldd 更精确）
+
+```bash
+# 查看 NEEDED 动态库
+objdump -p /path/to/binary | grep NEEDED
+
+# 示例输出：
+# NEEDED               libc.so.6
+# NEEDED               libpthread.so.0
+# NEEDED               libssl.so.3
+# NEEDED               libcrypto.so.3
+```
+
+### 4. pactree - 已安装包的依赖树
+
+**适用场景**: 查看已安装包的完整依赖树
+
+```bash
+# 安装 pactree（属于 pacman-contrib）
+sudo pacman -S pacman-contrib
+
+# 查看依赖树
+pactree myapp
+
+# 反向依赖树（哪些包依赖 myapp）
+pactree -r myapp
+```
+
+### 5. pscache - Python 依赖探测
+
+**适用场景**: Python 应用的依赖探测
+
+```bash
+# 查看 Python 脚本的导入
+grep -r "import " /path/to/app/ | grep -v "__pycache__"
+
+# 使用 pipreqs 自动生成 requirements
+pip install pipreqs
+pipreqs /path/to/app/
+```
+
+### 依赖探测工作流
+
+**⚠️ 检查点**: 创建 PKGBUILD 时，推荐按以下顺序探测依赖
+
+```
+1. 使用 ldd/objdump 分析二进制动态依赖
+2. 检查应用文档/README 确认运行时依赖
+3. 构建并使用 namcap 验证依赖声明
+4. 根据 namcap 输出修正 PKGBUILD
+```
+
+**示例依赖探测流程**:
+
+```bash
+# Step 1: 分析二进制
+ldd ./myapp-binary | grep "=> /usr/lib" | awk '{print $1}'
+
+# Step 2: 转换为 Arch 包名
+# libssl.so.3 → openssl
+# libcrypto.so.3 → openssl
+# libcurl.so.4 → curl
+
+# Step 3: 写入 PKGBUILD
+depends=('openssl' 'curl' 'glibc')
+
+# Step 4: namcap 验证
+namcap PKGBUILD
+
+# Step 5: 修正后重新构建
+makepkg -sf
+namcap myapp-bin-1.0.0-1-x86_64.pkg.tar.zst
+```
 
 ---
 
