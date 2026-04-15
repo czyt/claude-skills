@@ -11,8 +11,9 @@ description: Homebrew Tap GitHub 发布助手 - 自动更新 Casks 和 Formulas 
 
 | Document | Content |
 |----------|---------|
-| [references/cask-template.md](references/cask-template.md) | Cask 模板语法与结构 |
+| [references/cask-template.md](references/cask-template.md) | Cask 模板语法与结构（含 postflight xattr） |
 | [references/formula-template.md](references/formula-template.md) | Formula 模板语法与结构 |
+| [references/font-template.md](references/font-template.md) | Font Cask 模板与命名规范 ⭐ 新增 |
 | [references/workflow-template.md](references/workflow-template.md) | GitHub Actions workflow 模板 |
 | [references/version-detection.md](references/version-detection.md) | 版本检测策略 |
 | [references/best-practices.md](references/best-practices.md) | 最佳实践与常见问题 |
@@ -20,7 +21,54 @@ description: Homebrew Tap GitHub 发布助手 - 自动更新 Casks 和 Formulas 
 
 ---
 
-## 仓库结构
+## 类型分类与目录规则
+
+### 三种类型自动判断
+
+| 类型特征 | 目录 | 安装位置 | 判断依据 |
+|---------|------|---------|---------|
+| **Formula** | `Formula/` | `/opt/homebrew/bin` | CLI 工具、命令行程序、库、服务 |
+| **Cask (App)** | `Casks/` | `/Applications` | GUI 应用、.dmg/.pkg/.zip 分发 |
+| **Cask (Font)** | `Casks/` | `~/Library/Fonts` | 字体文件（.ttf/.otf），**命名必须以 font- 开头** |
+
+### ⚠️ 关键判断点
+
+**询问用户**：
+```
+「请确认软件类型：
+- CLI 命令行工具 → Formula (Formula/ 目录)
+- GUI 桌面应用 → Cask (Casks/ 目录)
+- 字体文件 → Cask Font (Casks/ 目录，命名 font-{name}.rb)
+
+该软件属于哪种类型？」
+```
+
+### Font 特殊规则
+
+**⚠️ 重要**: 字体包有特殊命名和仓库要求：
+
+1. **命名规范**: `font-{字体名称}.rb`（必须以 `font-` 开头）
+   - ✅ `font-fira-code.rb`
+   - ✅ `font-source-code-pro.rb`
+   - ❌ `FiraCode.rb`（错误格式）
+   - ❌ `font_fira_code.rb`（错误格式）
+
+2. **仓库要求**: 字体必须放在独立的 `homebrew-fonts` Tap（官方要求）
+   - 如果用户要发布字体，提示创建独立的 `homebrew-fonts` 仓库
+
+3. **安装位置**: `~/Library/Fonts`
+
+### 类型判断决策表
+
+| 上游发布文件格式 | 推荐类型 | 说明 |
+|----------------|---------|------|
+| `.dmg` / `.pkg` / `.zip` (含 .app) | **Cask (App)** | macOS GUI 应用 |
+| `.ttf` / `.otf` / `.zip` (含字体) | **Cask (Font)** | 字体，命名 font-xxx.rb |
+| 二进制可执行文件 | **Formula** | CLI 工具 |
+| 源码压缩包 | **Formula** | 需编译的项目 |
+| tar.gz / zip (仅二进制) | **Formula** | 预编译 CLI |
+
+---
 
 ### Homebrew Tap 标准布局
 
@@ -112,6 +160,57 @@ cask "{name}" do
 end
 ```
 
+### Cask + postflight xattr 处理
+
+**⚠️ macOS Gatekeeper 问题**: 从 GitHub Releases 下载的应用可能被 macOS 标记为"已损坏"，需要清除 quarantine 属性：
+
+```ruby
+cask "{name}" do
+  version "{version}"
+  sha256 "PLACEHOLDER"
+
+  url "https://github.com/{owner}/{repo}/releases/download/v#{version}/{file}.tar.gz"
+
+  name "{app_name}"
+  desc "{description}"
+  homepage "https://github.com/{owner}/{repo}"
+
+  depends_on macos: ">= :big_sur"  # 可选：macOS 版本限制
+
+  app "{app_name}.app"
+
+  # ✅ 清除 quarantine 属性，解决"已损坏"问题
+  postflight do
+    system_command "/usr/bin/xattr",
+                   args: ["-cr", "#{appdir}/{app_name}.app"],
+                   sudo: false
+  end
+
+  # 卸载后清理
+  zap trash: [
+    "~/.{app_name}",
+    "~/Library/Application Support/{app_id}",
+    "~/Library/Caches/{app_id}",
+    "~/Library/Preferences/{app_id}.plist",
+    "~/Library/Saved Application State/{app_id}.savedState",
+  ]
+end
+```
+
+**何时需要 postflight xattr**:
+- 从 GitHub Releases 下载的未签名应用
+- macOS 报告"已损坏，无法打开"错误
+- 用户需要手动运行 `xattr -cr` 才能打开
+
+**⚠️ 检查点**: 询问用户是否需要 xattr 处理：
+```
+「上游应用是否已签名？
+- 已签名（有 Apple Developer 签名） → 不需要 postflight
+- 未签名（GitHub Releases 直接发布） → 需要添加 postflight xattr
+
+是否需要添加 xattr 处理？」
+```
+
 ### 单架构 Cask
 
 **⚠️ sha256 使用占位符**
@@ -176,6 +275,80 @@ class {ClassName} < Formula
   test do
     system "#{bin}/{name}", "--version"
   end
+end
+```
+
+---
+
+## Font Cask 模板
+
+### ⚠️ Font 特殊规则
+
+1. **命名**: 必须以 `font-` 开头，如 `font-fira-code.rb`
+2. **仓库**: 字体需要独立的 `homebrew-fonts` Tap
+3. **安装**: 使用 `font` 指令而非 `app`
+
+### 单个字体文件
+
+```ruby
+cask "font-{name}" do  # ✅ 必须以 font- 开头
+  version "{version}"
+  sha256 "PLACEHOLDER"
+
+  url "https://github.com/{owner}/{repo}/releases/download/v#{version}/{font}.ttf"
+
+  name "{font_name}"
+  desc "{description}"
+  homepage "https://github.com/{owner}/{repo}"
+
+  livecheck do
+    url :url
+    strategy :github_latest
+  end
+
+  font "{font}.ttf"  # ✅ 使用 font 指令
+end
+```
+
+### 字体家族（多个字重）
+
+```ruby
+cask "font-{name}-family" do
+  version "{version}"
+  sha256 "PLACEHOLDER"
+
+  url "https://github.com/{owner}/{repo}/releases/download/v#{version}/{family}.zip"
+
+  name "{font_name} Family"
+  desc "{description}"
+  homepage "https://github.com/{owner}/{repo}"
+
+  # 安装多个字重
+  font "{family}-Thin.ttf"
+  font "{family}-Light.ttf"
+  font "{family}-Regular.ttf"
+  font "{family}-Medium.ttf"
+  font "{family}-Bold.ttf"
+  font "{family}-Italic.ttf"
+end
+```
+
+### 字体在子目录中
+
+```ruby
+cask "font-{name}" do
+  version "{version}"
+  sha256 "PLACEHOLDER"
+
+  url "https://github.com/{owner}/{repo}/releases/download/v#{version}/fonts.zip"
+
+  name "{font_name}"
+  homepage "https://github.com/{owner}/{repo}"
+
+  # 字体在 ZIP 的子目录
+  font "fonts/ttf/{font}-Regular.ttf"
+  font "fonts/ttf/{font}-Bold.ttf"
+  font "fonts/otf/{font}-Regular.otf"
 end
 ```
 
@@ -377,6 +550,10 @@ git push
 | sha256 是否预填 | **使用 PLACEHOLDER**: workflow 自动计算 |
 | 是否需要 livecheck | **推荐添加**: 自动版本检测 |
 | 定时更新频率 | **推荐**: 每12小时 (`0 */12 * * *`) |
+| **类型判断** | **必须询问**: CLI/GUI/Font？ |
+| **应用是否签名** | **询问**: 未签名需添加 postflight xattr |
+| **字体命名** | **必须**: font-{name}.rb 格式 |
+| **字体仓库** | **推荐**: 独立 homebrew-fonts Tap |
 
 ---
 
