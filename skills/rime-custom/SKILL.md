@@ -664,6 +664,194 @@ patch:
   'engine/translators/@next': lua_translator@time_translator
 ```
 
+### Lua 进阶功能（万象特色）
+
+万象拼音通过 Lua 实现了多项创新功能，可作为高级定制参考：
+
+| 功能 | 快捷键 | 说明 |
+|------|--------|------|
+| 手动排序 | Ctrl+J/K/L/P | 调整候选顺序，数据存于 `sequence.userdb` |
+| 输入统计 | `/ztj` `/ytj` `/ntj` `/rtj` `/tj` | 实时统计输入数据 |
+| 翻译模式 | Ctrl+E | 中英文互译（需词表支持） |
+| 声调显示 | Ctrl+S | 输入码动态显示全拼+音调 |
+| 模式切换 | Shift+Space | 中文/英文/混合模式切换 |
+
+**手动排序示例**：
+```lua
+-- 万象手动排序核心逻辑（简化版）
+-- Ctrl+J: 下移候选
+-- Ctrl+K: 上移候选
+-- Ctrl+L: 置顶候选
+-- Ctrl+P: 恢复原位
+
+function sequence_processor(key, env)
+  local ctx = env.engine.context
+  if key:repr() == "Control+j" then
+    -- 下移当前候选
+    local selected = ctx:get_selected_candidate()
+    -- 更新排序数据库...
+    return 1
+  end
+  return 2
+end
+```
+
+**Tips扩展提示**：
+```lua
+-- 化学式、翻译、表情等提示
+-- 数据存于 tips.userdb
+-- 用户按 `,` 上屏提示内容
+
+function tips_translator(input, seg, env)
+  -- 从 tips.userdb 查询提示内容
+  local tips_db = env.engine.user_db:get("tips")
+  local tip = tips_db:lookup(input)
+  if tip then
+    yield(Candidate("tips", seg.start, seg._end, tip, "提示"))
+  end
+end
+```
+
+**快符Lua（字母+/快速上屏）**：
+```yaml
+# 快符配置
+patch:
+  'engine/translators/@next': lua_translator@quick_symbol
+  
+# 使用：输入字母后按 / 直接上屏
+# 如：a/ → 上屏 a，避免选字
+```
+
+---
+
+## 第三方词库导入
+
+### 词库文件格式
+
+Rime 词库文件格式（`.dict.yaml`）：
+
+```yaml
+---
+name: 词库名            # 必须与文件名一致
+version: "版本号"
+sort: by_weight        # 按权重排序 | original 按原序
+columns:               # 列定义（可选）
+  - text               # 词条
+  - code               # 编码
+  - weight             # 权重
+import_tables:         # 导入子词库（可选）
+  - sub_dict_name
+---
+# 词条内容：文字<Tab>编码<Tab>权重
+你好	ni hao	100
+世界	shi jie	50
+```
+
+### 导入词库步骤
+
+**方法一：扩展词库（推荐）**
+
+```yaml
+# 在主方案的 .dict.yaml 中导入
+---
+name: rime_ice
+import_tables:
+  - rime_ice.ext       # 扩展词库
+  - my_custom_dict     # 自定义词库
+---
+```
+
+**方法二：完全替换词库**
+
+将新词库命名为 `luna_pinyin.dict.yaml`（或其他方案名），放入用户文件夹，重新部署即可完全替换。
+
+> ⚠️ 替换会覆盖原词库，谨慎操作。
+
+**方法三：导入到用户词典**
+
+```bash
+# 使用 rime_dict_manager 工具
+# 1. 关闭输入法
+# 2. 进入用户文件夹
+# 3. 执行导入命令
+rime_dict_manager --import luna_pinyin my_dict.txt
+```
+
+### 词库格式转换要点
+
+| 检查项 | 要求 | 转换方法 |
+|--------|------|---------|
+| 编码格式 | UTF-8 (no BOM) | `:set fenc=utf8 nobomb` (Vim) |
+| 行分隔 | 制表符 (Tab) | 正则替换或脚本转换 |
+| 字形一致 | 繁/简与源词库一致 | OpenCC 转换 |
+| 编码形式 | 标准形式（非简拼） | 拼写运算生成 |
+
+**Vim 转换命令**：
+```vim
+:set fenc=utf8 nobomb ff=unix
+```
+
+### 自定义短语 (custom_phrase.txt)
+
+```txt
+# 格式：词条<Tab>编码<Tab>权重（可选）
+的	d		# 非完整编码，可参与造词
+邮箱	vmail		# 完整编码，置顶显示
+
+# ⚠️ 完整编码会阻止造词，建议使用非完整编码
+```
+
+---
+
+## 调试与问题排查
+
+### 日志位置
+
+| 平台 | 日志路径 |
+|------|---------|
+| Windows | `%TEMP%\rime.weasel.*.log` |
+| macOS | `$TMPDIR/rime.squirrel.*.log` |
+| Linux | `/tmp/rime.ibus.*.log` 或 `/tmp/rime.fcitx.*.log` |
+
+### 常见错误诊断
+
+| 错误现象 | 可能原因 | 解决方案 |
+|----------|----------|---------|
+| 部署失败 | YAML 语法错误 | 检查缩进（用空格，不用Tab） |
+| 候选未变化 | custom.yaml 文件名错误 | 确认文件名匹配方案名 |
+| 配置不生效 | 未重新部署 | 右键托盘 → 重新部署 |
+| 词库不加载 | 编码格式错误 | 转换为 UTF-8 (no BOM) |
+| 候选闪退 | Lua 脚本错误 | 检查 rime.lua 语法 |
+| 内存占用高 | 词库过大 | 禁用不必要的词库 |
+
+### YAML 语法检查
+
+```bash
+# Python 快速验证 YAML
+python3 -c "import yaml; yaml.safe_load(open('rime_ice.custom.yaml'))"
+```
+
+### 部署调试技巧
+
+1. **逐步验证**：先部署最小配置，确认生效后逐步添加
+2. **日志分析**：查看日志中的 `ERROR` 和 `WARNING` 行
+3. **隔离测试**：删除疑似问题配置，确认是否该配置导致
+4. **版本回退**：保留配置备份，出问题时快速恢复
+
+### 配置备份建议
+
+```bash
+# 备份用户配置
+tar -czf rime_backup_$(date +%Y%m%d).tar.gz \
+  *.custom.yaml *.dict.yaml rime.lua custom_phrase.txt
+
+# 或使用 git 管理
+cd ~/Library/Rime  # 或对应配置目录
+git init
+git add *.custom.yaml *.dict.yaml rime.lua
+git commit -m "backup"
+```
+
 ---
 
 ## 辅助码系统（万象/白霜）
