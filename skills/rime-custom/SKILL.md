@@ -50,6 +50,8 @@ description: Rime 输入法配置定制助手。支持 custom.yaml 覆写、Emoj
 | [api-development.md](references/core/api-development.md) | librime API 开发 | 程序级扩展 |
 | [introduction.md](references/core/introduction.md) | Rime 架构原理 | 了解底层机制 |
 | [downloads.md](references/core/downloads.md) | 客户端下载 | 安装指引 |
+| [squirrel-client.md](references/core/squirrel-client.md) | 鼠须管配置 (macOS) | macOS特定设置 |
+| [weasel-client.md](references/core/weasel-client.md) | 小狼毫配置 (Windows) | Windows特定设置 |
 
 ### 定制指南 (customization/)
 | 文档 | 内容 | 用途 |
@@ -57,6 +59,7 @@ description: Rime 输入法配置定制助手。支持 custom.yaml 覆写、Emoj
 | [patch-guide.md](references/customization/patch-guide.md) | **Patch语法详解** ⭐ | custom.yaml 覆写 |
 | [user-manual.md](references/customization/user-manual.md) | 用户操作手册 | 打字/选字/切换 |
 | [userdata.md](references/customization/userdata.md) | 用户数据管理 | 同步/备份/词库 |
+| [mood-collection.md](references/customization/mood-collection.md) | 懂我心意体验 | 输入体验优化 |
 
 ### 方案详解 (schemes/)
 | 文档 | 内容 | 用途 |
@@ -64,10 +67,12 @@ description: Rime 输入法配置定制助手。支持 custom.yaml 覆写、Emoj
 | [rime-ice.md](references/schemes/rime-ice.md) | 雾凇词库设计 (42KB) | 简体拼音配置 |
 | [rime-wanxiang.md](references/schemes/rime-wanxiang.md) | 万象完整文档 (94KB) | 辅助码/语法模型 |
 | [rime-frost.md](references/schemes/rime-frost.md) | 白霜词频优化 (32KB) | 墨奇辅助码 |
+| [mint-guide.md](references/schemes/mint-guide.md) | 薄荷新手指南 | 新手入门教程 |
+| [oh-my-rime.md](references/schemes/oh-my-rime.md) | Oh-My-Rime配置包 (52KB) | 薄荷完整方案 |
 | [combopinyin.md](references/schemes/combopinyin.md) | 宫保拼音专题 | 并击输入 |
 
 ### 原始抓取 (scraped/)
-14个原始文档 (544KB, 12000行)，包含上述所有内容的未整理版本。
+19个原始文档 (664KB)，包含上述所有内容的未整理版本。
 
 > 📖 **使用策略**：优先查 `rime-knowledge-base.md` 获取摘要，需要深入时查阅分类目录。AI编写配置工具时，应先读 `customization/patch-guide.md` 理解Patch语法。
 
