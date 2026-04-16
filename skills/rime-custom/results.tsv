@@ -5,3 +5,7 @@ timestamp	commit	skill	old_score	new_score	status	dimension	note	eval_mode
 2026-04-16T10:30	darwin-round1	rime-custom	69.9	79.5	keep	检查点+边界条件	增加检查点、异常处理、辅助码系统、快速速查表	dry_run
 2026-04-16T10:45	wiki-supplement	rime-custom	79.5	-	fetch	-	补充6个Wiki页面并分类整理	dry_run
 2026-04-16T11:00	scheme-diff	rime-custom	79.5	85.0	keep	方案配置差异	详列6方案文件结构、特有功能、冲突处理	dry_run
+2026-04-16T11:15	client-docs	rime-custom	85.0	-	fetch	-	补充鼠须管/小狼毫/薄荷文档(共19文件)	dry_run
+2026-04-16T11:30	advanced-topics	rime-custom	85.0	88.0	keep	Lua进阶+调试	万象Lua特色、词库导入、调试排查	dry_run
+2026-04-16T12:00	round2-baseline	rime-custom	88.0	76.0	baseline	-	基线评估（8维度）	dry_run
+2026-04-16T12:10	capability-boundary	rime-custom	76.0	77.75	keep	能力边界说明	添加skill能力边界说明，明确不提供脚本	dry_run
