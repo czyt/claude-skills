@@ -173,14 +173,40 @@ style:
 
 ## 雾凇拼音(rime-ice) 特色配置
 
-雾凇拼音是目前最流行的简体拼音方案。
+雾凇拼音是目前最流行的简体拼音方案，由 iDvel 开发维护。
 
 ### 特色功能
 
-- 丰富的词库（100万+词条）
-- 内置 Emoji 支持
-- 智能纠错（拼写容错）
-- 扩展词库支持
+- **丰富的词库**：基础词库 + 扩展词库 + 腾讯词向量，共 100万+ 词条
+- **内置 Emoji 支持**：纯手搓 Emoji 映射
+- **智能纠错**：拼写容错、模糊音
+- **英文输入优化**：20k 常见单词 + 扩展词库，中英混输
+- **拆字反查**：`uU` + 拼音，拆字辅码 `拼音 + `` + 拆字辅码`
+- **以词定字**：左右中括号 `[`、`]`
+- **Unicode 输入**：`U` + Unicode 码位
+- **数字大写**：`R` + 数字
+- **日期时间**：内置 date_translator
+- **农历**：`N` + 八位数字；全拼 `nl`，双拼 `lunar`
+- **简易计算器**：`cC` + 算式
+- **UUID**：`uuid`
+- **特殊符号**：全拼 `v` + 首字母缩写；双拼 `V` + 首字母缩写
+
+### 版本要求
+
+- librime ≥ 1.8.5
+- 含有 librime-lua 依赖
+- 小狼毫 ≥ 0.15.0
+- 鼠须管 ≥ 1.0.0
+
+### 词库结构
+
+| 词库 | 内容 | 说明 |
+|------|------|------|
+| `cn_dicts/base` | 基础词库 | 两字词 + 调频 |
+| `cn_dicts/ext` | 扩展词库 | 多音字注音 |
+| `cn_dicts/tencent` | 腾讯词向量 | 大词库，自动注音 |
+| `en_dicts/en` | 英文词库 | 20k 常见单词 |
+| `en_dicts/en_ext` | 英文扩展 | 缩写 + 互联网相关 |
 
 ### 常用覆写配置
 
@@ -199,10 +225,6 @@ patch:
     - derive/^([zcs])h/$1/  # zh/z 模糊
     - derive/([aei])n$/$1ng/  # en/eng 模糊
 
-  # 禁用部分功能
-  'speller/algebra/@after 0':
-    - xform/^([aeiou])(ng)$/V$1/  # 优化显示
-
   # 启用 Lua 扩展
   'engine/translators/@next': lua_translator@time_translator
 
@@ -213,77 +235,117 @@ patch:
     states: ["漢字", "汉字"]
 ```
 
+### 安装方式
+
+```bash
+# Git 安装（推荐）
+git clone https://github.com/iDvel/rime-ice.git Rime --depth 1
+
+# 东风破安装
+bash rime-install iDvel/rime-ice:others/recipes/full
+
+# 双拼补丁（小鹤双拼）
+bash rime-install iDvel/rime-ice:others/recipes/config:schema=flypy
+```
+
 ---
 
 ## 白霜拼音(rime-frost) 特色配置
 
-白霜拼音由 gaboolic 开发，强调纯净和高效。
+白霜拼音由 gaboolic 开发，基于雾凇拼音修改，专注于词频优化。
 
 ### 特色功能
 
-- 纯净词库，无冗余词条
-- 快速响应
-- 简洁的配置结构
+- **词频优化**：基于 745396750 字高质量语料重新统计
+- **精简词库**：删除冷僻词、废词、不健康词汇
+- **辅助码支持**：` 开启墨奇辅助码
+- **带调韵母**：`/a` `/e` `/u` 等快速输入
+- **符号输入**：`/fh` 更多符号
 
-### 适用人群
+### 触发指令
 
-- 追求简洁的用户
-- 不需要过多花哨功能
-- 重视输入效率
+| 指令 | 功能 |
+|------|------|
+| `/fh` | 符号 |
+| `/a` `/e` `/u` | 带调韵母 |
+| `rq` `sj` `xq` `dt` `ts` | 日期时间 |
+| `` ` `` | 开启辅助码 |
+| `uU` | 部件拆字反查 |
+| `U` | Unicode |
+| `R` | 数字金额大写 |
+| `N` | 农历 |
+| `V` | 计算器 |
+
+### 双拼支持
+
+- 自然码双拼
+- 小鹤双拼
+- 微软双拼
+- 搜狗双拼
+
+### 安装方式
+
+```bash
+# Git 安装
+git clone --depth 1 https://github.com/gaboolic/rime-frost Rime
+
+# 东风破安装
+bash rime-install gaboolic/rime-frost:others/recipes/full
+```
 
 ---
 
 ## 万象拼音(rime_wanxiang) 特色配置
 
-万象拼音由 amzxyz 开发，支持多语言和繁简混输。
+万象拼音由 amzxyz 开发，支持繁简混输、多语言、语法模型。
 
-### 特色功能
+### 版本对比
 
-- 繁简双向转换
-- 多语言支持（中英日韩）
-- 丰富的符号输入
-- 汉字拆分反查
+| 特性 | 标准版 | 增强版 Pro |
+|------|--------|-----------|
+| 方案文件 | `wanxiang.schema.yaml` | `wanxiang_pro.schema.yaml` |
+| 支持类型 | 全拼、任意双拼 | 仅双拼 |
+| 自动调频 | 开启 | 关闭 |
+| 用户词记录 | 自动积累 | 手动造词 ` `` ` 引导 |
+| 辅助码 | 仅声调 | 7 种辅助码可选 |
 
-### 配置要点
+### 核心功能
 
-```yaml
-# wanxiang.custom.yaml
-patch:
-  # 繁简开关
-  switches:
-    - name: zh_simp
-      reset: 0  # 默认繁体
-      states: ["漢字", "汉字"]
+- **全词库带调拼音**：多种带调方案、声调注释
+- **深度反查**：两分、多分、笔画，支持 Unicode 17
+- **Lua 扩展**：符号包裹、Tips 显示、手动排序、输入统计
+- **辅码兼容**：墨奇码、鹤形、自然码、虎码等 8 种
+- **语法模型**：支持 kenlm 模型，整句预测
 
-  # 多语言翻译器
-  'engine/translators/@next':
-    - table_translator@english
-    - table_translator@japanese
+### 切换指令
+
 ```
+/flypy    → 小鹤双拼
+/mspy     → 微软双拼
+/zrm      → 自然码
+/sogou    → 搜狗双拼
+/znabc    → 智能ABC
+/ziguang  → 紫光双拼
+/pinyin   → 全拼
+/wxsp     → 万象双拼
+```
+
+### 语法模型安装
+
+下载语法模型文件，放置于 Rime 用户文件夹根目录即可。
 
 ---
 
 ## 薄荷输入法 特色配置
 
-薄荷输入法专注于新手友好体验。
+薄荷输入法专注于新手友好体验，由 Mintimate 开发。
 
 ### 特色功能
 
 - 简单的安装流程
 - 清晰的配置说明
 - 默认配置即可使用
-
-### MCP 工具支持
-
-薄荷输入法提供 MCP 服务：
-- 服务地址：https://www.mintimate.cc/mcp
-- 传输协议：Streamable HTTP
-- 协议版本：2025-03-26
-- 可用工具：
-  - `query_oh-my-rime` — 语义搜索知识库
-  - `get_download_links` — 获取下载链接
-  - `get_schema_list` — 获取方案列表
-  - `get_author_info` — 获取作者信息
+- 提供 MCP 知识库查询服务
 
 ---
 
