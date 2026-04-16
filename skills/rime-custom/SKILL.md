@@ -14,7 +14,7 @@ description: Rime 输入法配置定制助手。支持 custom.yaml 覆写、Emoj
 > - 候选词数量/外观 → [候选词数量和布局](#候选词数量和布局)
 > - 模糊拼音 → [模糊拼音设置](#模糊拼音设置)
 > - Emoji → [Emoji 配置](#emoji-配置-opencc)
-> - 繁简转换 → [Emoji 配置](#emoji-配置-opencc) 方式二
+> - 繁简转换 → [繁简转换配置](#繁简转换配置)
 > - Lua扩展 → [Lua 功能扩展](#lua-功能扩展)
 > - 词库导入 → [第三方词库导入](#第三方词库导入)
 > - 同步备份 → [多设备同步](#多设备同步)
@@ -557,8 +557,13 @@ patch:
     opencc_config: emoji.json
     option_name: emoji
     tips: all  # 显示 Emoji 提示
+```
 
-### 方式二：OpenCC 繁简转换
+---
+
+## 繁简转换配置
+
+通过 OpenCC 实现繁简转换功能：
 
 ```yaml
 patch:
