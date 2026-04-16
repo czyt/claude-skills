@@ -35,7 +35,7 @@
       "id": 6,
       "name": "scheme-selection",
       "prompt": "帮我了解雾凇、白霜、薄荷、万象这几个方案的区别，推荐一个适合我的",
-      "expected": "对比四个方案（rime-ice/rime-frost/rime_mint/wanxiang）的特点、配置文件名、适用场景，根据用户需求给出推荐"
+      "expected": "对比四个方案（rime-ice/rime-frost/rime_mint/wanxiang）的特点、配置文件名、适用场景，说明各方案有系列变体，根据用户需求给出推荐"
     },
     {
       "id": 7,
@@ -48,6 +48,18 @@
       "name": "schema-file-name-check",
       "prompt": "我刚安装了薄荷输入法，想修改候选词数量，但不知道配置文件叫什么名字",
       "expected": "引导用户先查看配置目录中的 *.schema.yaml 文件名，确认 schema_id，再决定对应的 *.custom.yaml 文件名（应为 rime_mint.custom.yaml）"
+    },
+    {
+      "id": 9,
+      "name": "wanxiang-variant-selection",
+      "prompt": "我使用万象输入法，想配置 Pro 版的辅助码功能",
+      "expected": "识别用户需要 wanxiang_pro.custom.yaml，说明 Pro 版的辅助码配置（7种可选），区分标准版和 Pro 版的差异"
+    },
+    {
+      "id": 10,
+      "name": "mint-double-pinyin-config",
+      "prompt": "我用的是薄荷输入法的小鹤双拼方案，想配置翻页快捷键",
+      "expected": "识别用户需要 rime_mint_flypy.custom.yaml 或 double_pinyin_flypy.custom.yaml，提供 key_binder/bindings 翻页配置"
     }
   ]
 }
