@@ -1,6 +1,6 @@
 ---
 name: aur-github-publish
-description: AUR GitHub 发布助手 - 自动更新 PKGBUILD 版本、发布到 GitHub 仓库并同步到 AUR。支持手动版本输入、自动版本检测、pkgrel bump、多架构支持（x86_64/aarch64）、deb/rpm/tar.gz 包处理。包含四种包类型命名规则（-bin/-git/无后缀/-font）。触发词：更新 AUR 包、发布到 AUR、创建 PKGBUILD、更新 Arch Linux 包、AUR 自动发布。
+description: AUR GitHub 发布助手 - 自动更新 PKGBUILD 版本、发布到 GitHub 仓库并同步到 AUR。支持三种场景：版本监控更新、编译发布一体化（GitHub Action）、GoReleaser集成（aurs/aur_sources）。支持手动版本输入、自动版本检测、pkgrel bump、多架构支持（x86_64/aarch64）、deb/rpm/tar.gz 包处理。包含四种包类型命名规则（-bin/-git/无后缀/-font）。触发词：更新 AUR 包、发布到 AUR、创建 PKGBUILD、更新 Arch Linux 包、AUR 自动发布、GoReleaser AUR。
 ---
 
 # AUR GitHub 发布助手
@@ -17,6 +17,31 @@ description: AUR GitHub 发布助手 - 自动更新 PKGBUILD 版本、发布到 
 | [references/package-types.md](references/package-types.md) | 不同包类型处理 (deb/rpm/tar.gz/AppImage) |
 | [references/best-practices.md](references/best-practices.md) | 最佳实践与常见问题 |
 | [references/real-world-examples.md](references/real-world-examples.md) | 真实项目示例（含 GitHub Action 实例） |
+| [references/goreleaser-aur.md](references/goreleaser-aur.md) | GoReleaser AUR 集成（aurs/aur_sources） ⭐ |
+
+---
+
+## 三种发布场景 ⚠️
+
+选择正确的发布场景是配置的第一步：
+
+| 场景 | 描述 | 适用情况 | 推荐配置 |
+|------|------|---------|---------|
+| **场景一：版本监控更新** | 定时检测上游版本，自动更新 AUR | 维护第三方项目的 AUR 包 | GitHub workflow + schedule |
+| **场景二：编译发布一体化** | Tag 推送 → 编译 → Release → 推 AUR | 自己项目的发布流程 | GitHub workflow + publish-aur job |
+| **场景三：GoReleaser 集成** | GoReleaser 自动构建 + 发布 AUR | Go/Rust 等项目 | `.goreleaser.yml` aurs/aur_sources |
+
+### ⚠️ 关键检查点：选择场景
+
+```
+询问用户：
+「请确认发布场景：
+- 维护第三方项目 → 场景一（版本监控）
+- 自己项目编译后直接推 AUR → 场景二（编译发布一体化）
+- Go/Rust 项目使用 GoReleaser → 场景三（GoReleaser）
+
+您属于哪种场景？」
+```
 
 ---
 
@@ -270,7 +295,9 @@ package() {
 
 ## GitHub Actions Workflow
 
-### 标准 Workflow 模板
+### 场景一：版本监控更新 ⭐ 默认
+
+**适用场景**: 维护第三方项目的 AUR 包，定时检测上游版本变化
 
 ```yaml
 name: Update {pkgname} Version
@@ -367,6 +394,235 @@ jobs:
           commit_message: "Update to version ${{ steps.get_version.outputs.version }}"
           ssh_keyscan_types: rsa,ecdsa,ed25519
 ```
+
+---
+
+### 场景二：编译发布一体化
+
+**适用场景**: 自己的项目，Tag 推送 → 编译 → GitHub Release → 立即推送 AUR
+
+**与场景一的区别**：
+- 不需要版本检测，版本来自 git tag
+- 编译和发布在同一次 workflow 中完成
+- 适用于项目作者维护自己的 AUR 包
+
+#### Workflow 模板
+
+```yaml
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+            output: myapp-linux-amd64
+          - goos: linux
+            goarch: arm64
+            output: myapp-linux-arm64
+          - goos: darwin
+            goarch: amd64
+            output: myapp-darwin-amd64
+          - goos: darwin
+            goarch: arm64
+            output: myapp-darwin-arm64
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-go@v4
+        with:
+          go-version: stable
+      
+      - name: Build
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+        run: |
+          go build -ldflags="-s -w -X main.version=${{ github.ref_name }}" \
+            -o dist/${{ matrix.output }}
+      
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.output }}
+          path: dist/${{ matrix.output }}
+
+  release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist/
+          merge-multiple: true
+      
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: dist/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  publish-aur:
+    name: Publish to AUR
+    needs: release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Extract version
+        id: version
+        run: echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+      
+      - name: Update PKGBUILD
+        run: |
+          cd {pkgname}
+          sed -i "s/^pkgver=.*/pkgver=${{ steps.version.outputs.version }}/" PKGBUILD
+          sed -i "s/^pkgrel=.*/pkgrel=1/" PKGBUILD
+      
+      - name: Publish to AUR
+        uses: KSXGitHub/github-actions-deploy-aur@v4.1.2
+        with:
+          pkgname: {pkgname}
+          pkgbuild: ./{pkgname}/PKGBUILD
+          updpkgsums: true
+          commit_username: ${{ secrets.AUR_USERNAME }}
+          commit_email: ${{ secrets.AUR_EMAIL }}
+          ssh_private_key: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+          commit_message: "Update to version ${{ steps.version.outputs.version }}"
+          ssh_keyscan_types: rsa,ecdsa,ed25519
+```
+
+#### 关键差异说明
+
+| 配置项 | 场景一（版本监控） | 场景二（编译发布） |
+|--------|------------------|-------------------|
+| **触发条件** | `schedule` + `workflow_dispatch` | `push: tags: v*` |
+| **版本来源** | GitHub API 检测 | git tag 直接提取 |
+| **编译步骤** | 无（使用上游 release） | 需要 build job |
+| **发布顺序** | 检测 → 更新 → 推送 | 编译 → Release → 推送 |
+| **适用包类型** | `-bin`（预编译） | `-bin`（自己的编译产物） |
+
+---
+
+### 场景三：GoReleaser 集成 ⭐
+
+**适用场景**: Go/Rust/Zig 等项目，使用 GoReleaser 自动化发布流程
+
+**优势**：
+- 一份 `.goreleaser.yml` 配置编译、打包、发布
+- 自动支持多平台编译
+- 同时发布 `-bin` 包和源码包
+- checksum 自动计算
+
+#### 配置参考文档
+
+详细配置请查阅 [references/goreleaser-aur.md](references/goreleaser-aur.md)
+
+#### 快速配置示例
+
+**二进制包 (`aurs`)**：
+```yaml
+# .goreleaser.yml
+aurs:
+  - name: myapp-bin              # 自动添加 -bin 后缀
+    homepage: "https://example.com/"
+    description: "My application"
+    maintainers:
+      - "Your Name <your@email.com>"
+    license: "MIT"
+    private_key: "{{ .Env.AUR_KEY }}"
+    git_url: "ssh://aur@aur.archlinux.org/myapp-bin.git"
+    depends:
+      - curl
+    package: |-
+      install -Dm755 "./myapp" "${pkgdir}/usr/bin/myapp"
+      install -Dm644 "./LICENSE" "${pkgdir}/usr/share/licenses/myapp/LICENSE"
+```
+
+**源码包 (`aur_sources`)**：
+```yaml
+# .goreleaser.yml
+aur_sources:
+  - name: myapp                  # 移除 -bin 后缀
+    homepage: "https://example.com/"
+    description: "My application"
+    maintainers:
+      - "Your Name <your@email.com>"
+    license: "MIT"
+    private_key: "{{ .Env.AUR_KEY }}"
+    git_url: "ssh://aur@aur.archlinux.org/myapp.git"
+    makedepends:
+      - go
+      - git
+    depends:
+      - curl
+    build_script: |-
+      cd "${pkgname}_${pkgver}"
+      go build -ldflags="-w -s -X main.version=${pkgver}" .
+    package: |-
+      cd "${pkgname}_${pkgver}"
+      install -Dsm755 ./myapp "${pkgdir}/usr/bin/myapp"
+```
+
+#### GitHub Actions 配合
+
+```yaml
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  goreleaser:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - uses: actions/setup-go@v4
+        with:
+          go-version: stable
+      
+      - uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          version: "~> v2"
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          AUR_KEY: ${{ secrets.AUR_KEY }}
+```
+
+#### `aurs` vs `aur_sources` 对比
+
+| 配置项 | `aurs` (二进制包) | `aur_sources` (源码包) |
+|--------|------------------|----------------------|
+| **包名后缀** | 强制 `-bin` | 移除 `-bin` |
+| **构建方式** | 直接安装预编译二进制 | 从源码编译 |
+| **必需参数** | `package` 脚本 | `build_script` + `package` |
+| **依赖类型** | `depends` (运行时) | `depends` + `makedepends` (构建时) |
+| **适用项目** | 任意预编译项目 | Go/Rust/Zig 等可编译项目 |
 
 ---
 
