@@ -183,6 +183,11 @@ description: Rime 输入法配置定制助手。支持 custom.yaml 覆写、Emoj
 >   - 新手入门+简单配置 → 薄荷
 >   - 繁简混输+高级定制 → 万象
 
+**边界情况处理**：
+- 用户提及的方案名不在已知列表 → 先查看配置目录实际文件，确认后再配置
+- 配置目录没有 `*.schema.yaml` 文件 → 可能未安装任何方案，引导安装
+- 用户不确定但有已配置文件 → 读取现有 `*.custom.yaml` 文件名反推方案名
+
 ---
 
 ## 方案配置差异详解 ⚠️
@@ -401,6 +406,14 @@ patch:
 | Linux (Fcitx5) | 中州韵 | `~/.local/share/fcitx5/rime/` |
 | Android | 同文/fcitx5 | `/rime` 或 `.../data/rime` |
 | iOS | 仓输入法 | 应用内文件管理 |
+
+**边界情况处理**：
+- 用户不确定平台 → 先问"您用的是 Windows、macOS 还是 Linux？"
+- 用户找不到配置目录 → 提供快速查找方法：
+  - Windows: 在资源管理器地址栏直接输入 `%APPDATA%\Rime`
+  - macOS: 终端执行 `open ~/Library/Rime`
+  - Linux: `ls ~/.config/ibus/rime/` 或 `ls ~/.local/share/fcitx5/rime/`
+- 目录不存在 → 可能未安装客户端，引导安装后再配置
 
 ### Step 3: 创建/修改 custom.yaml ⚠️
 
