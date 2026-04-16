@@ -1,6 +1,6 @@
 ---
 name: rime-custom
-description: Rime 输入法配置定制助手。支持 custom.yaml 覆写、Emoji/OpenCC、模糊拼音、Lua 扩展、多设备同步。覆盖雾凇/白霜/薄荷/万象方案。触发词：Rime配置、小狼毫、鼠须管、custom.yaml、模糊拼音、辅助码。
+description: Rime 输入法配置定制助手。支持 custom.yaml 覆写、Emoji/OpenCC、模糊拼音、Lua 扩展、多设备同步。覆盖雾凇/白霜/薄荷/万象方案。何时用：用户需要定制输入法配置、修改候选词数量、启用模糊拼音、配置Emoji、添加Lua扩展、导入词库、多设备同步时。触发词：Rime配置、小狼毫、鼠须管、custom.yaml、模糊拼音、辅助码、候选词、词库导入、Rime定制、输入法配置。
 ---
 
 # Rime 输入法配置定制助手
