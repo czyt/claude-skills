@@ -106,6 +106,195 @@ description: Rime 输入法配置定制助手。支持 custom.yaml 覆写、Emoj
 
 > 🛑 **检查点**：确认方案后再继续。不确定时问用户："您用的是哪个方案？雾凇、白霜、薄荷还是万象？"
 
+---
+
+## 方案配置差异详解 ⚠️
+
+不同方案的文件结构、配置方式、功能支持各不相同，修改前务必确认。
+
+### 雾凇拼音 (rime-ice)
+
+| 文件类型 | 文件名 | 说明 |
+|---------|-------|------|
+| Schema主文件 | `rime_ice.schema.yaml` | 主方案配置，勿直接修改 |
+| Custom覆写 | `rime_ice.custom.yaml` | 用户定制配置 |
+| 词库文件 | `rime_ice.dict.yaml` | 主词库（100万+词条） |
+| 扩展词库 | `rime_ice.ext.dict.yaml` | 扩展词条 |
+| Emoji映射 | `opencc/emoji.json` | Emoji自动映射 |
+
+**特有功能配置**：
+- 拆字反查：`uU` + 拼音（方案内置，无需配置）
+- 以词定字：配置 `engine/translators` 添加 `select_words`
+- 特殊符号：`v` + 缩写（全拼）/ `V` + 缩写（双拼）
+
+**配置示例**：
+```yaml
+# rime_ice.custom.yaml - 雾凇专用配置
+patch:
+  # 模糊音（雾凇内置模糊音开关，无需手动配置）
+  # 'speller/algebra' 仅用于自定义拼写规则
+
+  # 以词定字
+  'engine/translators/@next': select_words
+
+  # 词库扩展
+  'translator/dictionary': rime_ice.ext
+```
+
+### 白霜拼音 (rime-frost)
+
+| 文件类型 | 文件名 | 说明 |
+|---------|-------|------|
+| Schema主文件 | `rime_frost.schema.yaml` | 主方案配置 |
+| Custom覆写 | `rime_frost.custom.yaml` | 用户定制配置 |
+| 词库文件 | `rime_frost.dict.yaml` | 词频优化词库 |
+| 墨奇辅码 | `moqi.dict.yaml` | 辅助码映射 |
+
+**特有功能配置**：
+- 墨奇辅助码：按 `` ` `` 开启（方案内置）
+- 符号扩展：`/fh` `/yd` 等（通过 `punctuator/symbols` 配置）
+- 日期时间：`rq` `sj` `xq` 直接输入
+
+**配置示例**：
+```yaml
+# rime_frost.custom.yaml - 白霜专用配置
+patch:
+  # 辅码相关配置已内置，一般无需修改
+
+  # 自定义符号
+  'punctuator/symbols':
+    "/my": ["自定义符号1", "自定义符号2"]
+```
+
+### 万象拼音 (wanxiang)
+
+| 文件类型 | 文件名 | 说明 |
+|---------|-------|------|
+| Schema主文件 | `wanxiang.schema.yaml` | 主方案（含多种双拼） |
+| Custom覆写 | `wanxiang.custom.yaml` | 用户定制配置 |
+| 语法模型 | `grammar.bin` | kenlm语言模型（需单独下载） |
+| 辅码文件 | `aux_code.dict.yaml` | 辅助码映射（PRO版） |
+| 反查库 | `reverse.dict.yaml` | 拼音反查 |
+
+**特有功能配置**：
+- 7种辅助码：墨奇、鹤形、自然、虎码、五笔、汉心、首右
+- 方案切换指令：`/flypy` `/mspy` `/zrm` `/sogou` `/pinyin`
+- 语法模型：需下载 `grammar.bin` 放入用户目录
+- 声调辅助：`7890` 代表 `1234` 声
+
+**配置示例**：
+```yaml
+# wanxiang.custom.yaml - 万象专用配置
+patch:
+  # 切换默认双拼方案（万象内置切换指令，此处仅设置默认）
+  wanxiang_lookup:
+    key: "`"  # 辅码触发键
+
+  # 语法模型路径（需先下载grammar.bin）
+  grammar_translator:
+    model: grammar.bin
+```
+
+**特殊指令**（输入状态直接输入）：
+```
+/flypy   → 切换小鹤双拼
+/mspy    → 切换微软双拼
+/zrm     → 切换自然码
+/sogou   → 切换搜狗双拼
+/pinyin  → 切换全拼
+```
+
+### 薄荷输入法 (mint)
+
+| 文件类型 | 文件名 | 说明 |
+|---------|-------|------|
+| Schema主文件 | `mint.schema.yaml` | 主方案配置 |
+| Custom覆写 | `mint.custom.yaml` | 用户定制配置 |
+
+**特点**：
+- 新手友好，配置简单
+- 支持 MCP 知识库查询（薄荷官方提供）
+- 基础功能齐全，适合入门
+
+**配置示例**：
+```yaml
+# mint.custom.yaml - 薄荷专用配置
+patch:
+  "menu/page_size": 7
+  "style/color_scheme": native
+```
+
+### 朙月拼音 (luna_pinyin)
+
+| 文件类型 | 文件名 | 说明 |
+|---------|-------|------|
+| Schema主文件 | `luna_pinyin.schema.yaml` | 官方默认方案 |
+| Custom覆写 | `luna_pinyin.custom.yaml` | 用户定制配置 |
+| 词库文件 | `luna_pinyin.dict.yaml` | 繁体词库 |
+| 自定义短语 | `custom_phrase.txt` | 用户短语（Tab分隔） |
+
+**特有功能配置**：
+- 繁简转换：通过 `simplifier` + OpenCC 配置
+- 自定义短语：创建 `custom_phrase.txt` 文件
+
+**配置示例**：
+```yaml
+# luna_pinyin.custom.yaml - 朙月专用配置
+patch:
+  # 简体输出
+  switches/@next:
+    name: zh_simp
+    reset: 1
+    states: ["漢字", "汉字"]
+
+  'simplifier/opencc_config': t2s.json
+```
+
+### 双拼方案
+
+| 方案 | Schema文件 | 特点 |
+|------|-----------|------|
+| 自然码 | `double_pinyin.schema.yaml` | 经典双拼 |
+| 小鹤双拼 | `double_pinyin_flypy.schema.yaml` | 常用双拼 |
+| 微软双拼 | `double_pinyin_mspy.schema.yaml` | Windows内置 |
+
+**配置差异**：
+- 双拼方案共享朙月拼音词库
+- 通过 `speller/algebra` 定义双拼映射
+- 模糊音配置与全拼不同（作用于双拼编码）
+
+---
+
+### 方案配置冲突处理
+
+⚠️ **多方案共存时的注意事项**：
+
+1. **custom.yaml 文件名必须匹配方案名**
+   - 雾凇用 `rime_ice.custom.yaml`，不是 `default.custom.yaml`
+   - 白霜用 `rime_frost.custom.yaml`
+   - 错误文件名会导致配置不生效
+
+2. **default.custom.yaml 仅用于全局设置**
+   ```yaml
+   # default.custom.yaml - 全局配置（所有方案共用）
+   patch:
+     schema_list:
+       - schema: rime_ice      # 默认方案
+       - schema: luna_pinyin
+       - schema: double_pinyin
+   ```
+
+3. **方案切换需重新部署**
+   - 修改任何 custom.yaml 后必须「重新部署」
+   - 切换方案指令（万象）也需要部署生效
+
+4. **词库文件不可混用**
+   - 雾凇词库与朙月词库编码格式不同
+   - 白霜词库与万象词库辅码格式不同
+   - 导入词库需确认与当前方案兼容
+
+---
+
 ### Step 2: 确认配置目录
 
 **输入**：用户操作系统
