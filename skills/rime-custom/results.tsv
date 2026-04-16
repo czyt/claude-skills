@@ -1,1 +1,3 @@
 timestamp	commit	skill	old_score	new_score	status	dimension	note	eval_mode
+2026-04-16T09:30	7c4c47e	rime-custom	-	88.8	baseline	-	初始创建基线评估	dry_run
+2026-04-16T09:35	round1	rime-custom	88.8	90.0	keep	MCP工具调用示例	添加MCP工具调用示例和使用场景细化	dry_run

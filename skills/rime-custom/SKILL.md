@@ -13,10 +13,29 @@ description: Rime 输入法配置定制助手，支持 custom.yaml 覆写、Emoj
 
 | 工具 | 功能 | 使用场景 |
 |------|------|---------|
-| `query_oh-my-rime` | 语义搜索薄荷输入法知识库 | 用户提问、配置查询 |
-| `get_download_links` | 获取客户端和配置包下载链接 | 安装引导 |
-| `get_schema_list` | 获取支持的输入方案列表 | 方案选择 |
-| `get_author_info` | 获取作者信息 | 方案介绍 |
+| `query_oh-my-rime` | 语义搜索薄荷输入法知识库 | 用户提问、配置查询、方案对比 |
+| `get_download_links` | 获取客户端和配置包下载链接 | 安装引导、客户端选择 |
+| `get_schema_list` | 获取支持的输入方案列表 | 方案选择、推荐合适的输入方案 |
+| `get_author_info` | 获取作者信息 | 方案介绍、了解方案背景 |
+
+### MCP 工具调用示例
+
+```
+# 用户询问配置问题时
+用户："怎么配置模糊拼音？"
+→ 调用 query_oh-my-rime({"query": "模糊拼音配置方法"})
+→ 返回知识库中的配置说明 + Skill 中的代码示例
+
+# 用户需要安装时
+用户："帮我下载鼠须管"
+→ 调用 get_download_links({"platform": "macOS"})
+→ 返回下载链接 + 安装指引
+
+# 用户选择方案时
+用户："哪个方案适合我？"
+→ 调用 get_schema_list()
+→ 返回方案列表 + Skill 中的对比表
+```
 
 ---
 
