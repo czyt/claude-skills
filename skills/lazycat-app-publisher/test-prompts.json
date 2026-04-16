@@ -30,6 +30,12 @@
       "name": "password-app-check",
       "prompt": "转换这个有密码的应用：\n\nservices:\n  admin-panel:\n    image: admin-panel:latest\n    environment:\n      ADMIN_PASSWORD: ${ADMIN_PASS}\n      SECRET_KEY: ${SECRET}\n    ports:\n      - \"80:80\"",
       "expected": "检测到密码体系，询问用户免密登录方案，生成 injects 配置"
+    },
+    {
+      "id": 6,
+      "name": "multi-entry-points",
+      "prompt": "我正在为一个博客系统创建 LazyCat 应用，需要有主博客入口（路径 /）和管理后台入口（路径 /admin），应用名是 myblog，请帮我配置多入口",
+      "expected": "生成包含 application.entries 的 manifest，正确设置 min_os_version: 1.4.3，并提供 locales 多语言配置示例"
     }
   ]
 }

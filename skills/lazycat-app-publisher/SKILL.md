@@ -319,6 +319,42 @@ Help me publish this application to LazyCat Cloud:
 4. 返回发布结果
 ```
 
+### Configure Multi-Entry Points
+
+**使用场景**: 应用需要多个入口（如主界面 + 管理后台）
+
+**⚠️ 版本要求**: lzcos v1.4.3+，需设置 `min_os_version: 1.4.3`
+
+```yaml
+# lzc-manifest.yml
+application:
+  subdomain: myblog
+  entries:
+    - id: main
+      title: "Blog"
+      path: /
+    - id: admin
+      title: "Admin"
+      path: /admin
+
+# package.yml - 多语言本地化
+locales:
+  en:
+    entries.main.title: "Blog"
+    entries.admin.title: "Admin Console"
+  zh:
+    entries.main.title: "博客"
+    entries.admin.title: "管理后台"
+```
+
+**字段说明**:
+- `id`: 入口唯一标识
+- `title`: 显示名称（支持 locales）
+- `path`: 入口路径（如 `/`、`/admin`）
+- `prefix_domain`: 可选，域名前缀（如 `admin` → `admin-myblog.xxx.lzcapp`）
+
+详细说明见 [references/advanced-features.md](references/advanced-features.md)
+
 ---
 
 ## 智能分析逻辑
