@@ -1,17 +1,17 @@
 [
   {
     "id": 1,
-    "prompt": "我想发布一个新的 AUR 包 myapp-bin，上游仓库是 github.com/example/myapp",
-    "expected": "检测首次发布，引导选择发布方式，确认包类型和版本号策略"
+    "prompt": "帮我为 nashsu/AutoCLI 这个 GitHub 项目创建一个新的 AUR 包，项目是一个预编译的 CLI 工具",
+    "expected": "正确判断包类型为 -bin，引导用户选择发布场景（版本监控），生成 PKGBUILD 和 workflow 文件，询问必要信息（包名、依赖等）"
   },
   {
     "id": 2,
-    "prompt": "帮我更新 autocli-bin 到最新版本",
-    "expected": "检测现有包，进入正常更新流程，获取最新版本并对比"
+    "prompt": "我的 myapp-bin AUR 包需要更新到 1.2.5 版本，并且我想手动指定版本号触发 workflow",
+    "expected": "使用 workflow_dispatch 输入版本，正确执行 pkgver 和 pkgrel 更新，生成正确的 sed 命令，提醒用户触发 workflow"
   },
   {
     "id": 3,
-    "prompt": "首次发布一个字体包到 AUR，仓庯是 font-fira-code",
-    "expected": "检测字体包类型，引导 font-{name} 命名规则，确认 arch='any'"
+    "prompt": "我在用 GoReleaser 发布 Go 项目，想同时发布 AUR 包，应该怎么配置？",
+    "expected": "正确引导用户使用 aurs 或 aur_sources，解释两者区别，提供 .goreleaser.yml 配置示例，提醒 AUR_KEY secret 配置"
   }
 ]

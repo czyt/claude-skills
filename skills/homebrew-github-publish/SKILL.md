@@ -115,10 +115,35 @@ workflow 会:
 
 ```bash
 # Workflow 中计算 sha256
-sha256sum /tmp/file.dmg | awk '{print $1}'
+sha256sum /tmp/file.dmg | awk '{print $1'}
 
 # Workflow 中更新 Cask 文件
 sed -i '/on_arm do/,/end/{s/sha256 ".*"/sha256 "${{ steps.checksums.outputs.arm64_sha256 }}"/}' Casks/{name}.rb
+```
+
+**⚠️ 具体 sed 替换示例**:
+
+| 场景 | sed 命令 | 说明 |
+|------|---------|------|
+| **更新版本号** | `sed -i 's/version ".*"/version "1.2.3"/' Casks/myapp.rb` | 替换 version 行 |
+| **更新 arm64 sha256** | `sed -i '/on_arm do/,/end/{s/sha256 ".*"/sha256 "abc123"/}'` | 在 on_arm 块内替换 |
+| **更新 x64 sha256** | `sed -i '/on_intel do/,/end/{s/sha256 ".*"/sha256 "def456"/}'` | 在 on_intel 块内替换 |
+| **更新单架构 sha256** | `sed -i 's/sha256 ".*"/sha256 "abc123"/' Casks/myapp.rb` | 直接替换 |
+| **更新 URL 中版本** | `sed -i 's|/v[0-9.]*-/|/v1.2.3-/|' Casks/myapp.rb` | URL 版本号替换 |
+
+**完整 workflow 更新示例**:
+
+```yaml
+- name: Update cask file
+  run: |
+    # 更新版本号
+    sed -i "s/version \".*\"/version \"${{ steps.version_check.outputs.new_version }}\"/" Casks/myapp.rb
+    
+    # 更新 arm64 sha256（在 on_arm do 到 end 之间）
+    sed -i '/on_arm do/,/end/{s/sha256 ".*"/sha256 "${{ steps.checksums.outputs.arm64_sha256 }}"/}' Casks/myapp.rb
+    
+    # 更新 x64 sha256（在 on_intel do 到 end 之间）
+    sed -i '/on_intel do/,/end/{s/sha256 ".*"/sha256 "${{ steps.checksums.outputs.x64_sha256 }}"/}' Casks/myapp.rb
 ```
 
 ### 3. 多架构支持
@@ -528,21 +553,36 @@ INITIAL_VERSION=$(echo "$LATEST_VERSION" | awk -F. '{print $1"."$2"."$3-1}')
 
 #### Step 0.5: 确认架构支持
 
-**⚠️ 根据软件类型询问架构**:
+**⚠️ 优先自动检测，再询问用户**:
+
+```bash
+# 自动检测架构支持
+curl -s https://api.github.com/repos/{owner}/{repo}/releases/latest | jq -r '.assets[].name' | grep -E 'mac|darwin' | sort -u
+
+# 输出示例分析：
+# App-1.0.0-mac-arm64.dmg   → 有 arm64 文件
+# App-1.0.0-mac-x64.dmg     → 有 x64 文件
+# App-1.0.0_universal.dmg   → Universal 单文件
+# 只有 arm64 或只有 x64    → 单架构
+```
+
+**架构自动判断规则**:
+
+| Release 文件命名 | 检测结果 | 模板选择 |
+|-----------------|---------|---------|
+| `*-arm64.*` + `*-x64.*` | **双架构** | `on_arm do` / `on_intel do` |
+| `*_universal.*` 或 `*_macos.*` | **Universal** | 单文件，无需架构区分 |
+| 仅 `*-arm64.*` | **仅 arm64** | 单架构，直接 sha256 |
+| 仅 `*-x64.*` 或 `*-amd64.*` | **仅 x64** | 单架构，直接 sha256 |
+
+**如无法自动检测，询问用户**:
 
 ```
 询问用户（Cask）：
-「请确认架构支持：
+「无法自动检测架构支持，请确认：
 - arm64 + x64 → 双架构模板（on_arm/on_intel）
 - 仅 arm64 → 单架构
 - universal → 单文件（无需架构区分）
-
-支持哪些架构？」
-
-询问用户（Formula）：
-「请确认架构支持：
-- arm64 + x64 → 双架构模板（Hardware::CPU.arm?/intel?）
-- 仅 arm64 → 单架构
 
 支持哪些架构？」
 ```

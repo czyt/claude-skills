@@ -1,17 +1,17 @@
 [
   {
     "id": 1,
-    "prompt": "我想发布一个新的 Homebrew Cask myapp，上游仓库是 github.com/example/myapp",
-    "expected": "检测首次发布，引导选择发布方式，确认软件类型和版本号策略"
+    "prompt": "我想为 myapp 这个 macOS GUI 应用创建一个 Homebrew Cask，项目地址是 github.com/user/myapp，发布的是 DMG 文件",
+    "expected": "正确判断类型为 Cask (App)，询问架构支持（arm64/x64/universal），生成 Cask 模板（含 PLACEHOLDER sha256），引导用户选择首次发布方式（GitHub 自动发布）"
   },
   {
     "id": 2,
-    "prompt": "帮我更新 myapp-cask 到最新版本",
-    "expected": "检测现有包，进入正常更新流程，获取最新版本并计算 checksum"
+    "prompt": "我有一个 Go CLI 工具 mytool，需要创建 Homebrew Formula，支持 arm64 和 x64 两种架构",
+    "expected": "正确判断类型为 Formula，生成多架构模板（Hardware::CPU.arm?/intel?），提供 livecheck 配置，生成 workflow 文件"
   },
   {
     "id": 3,
-    "prompt": "首次发布一个字体到 Homebrew，仓庯是 FiraCode 字体",
-    "expected": "检测字体类型，引导 font-{name}.rb 命名规则，确认使用 font 指令"
+    "prompt": "我开发的 macOS 应用从 GitHub Releases 下载后会被系统标记为已损坏，怎么解决？",
+    "expected": "识别 Gatekeeper/quarantine 问题，建议添加 postflight xattr 处理，提供正确的 Cask 模板片段（system_command /usr/bin/xattr）"
   }
 ]
