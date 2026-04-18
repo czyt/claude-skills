@@ -1,17 +1,17 @@
 [
   {
     "id": 1,
-    "prompt": "帮我创建一个 AUR 包，上游是 https://github.com/user/mycli，提供预编译二进制文件 mycli-linux-amd64",
-    "expected": "确认是 -bin 类型，询问包名（推荐 mycli-bin），生成 PKGBUILD 模板，提醒首次发布需手动 clone AUR 仓库，sha256sums 使用 SKIP"
+    "prompt": "我想发布一个新的 AUR 包 myapp-bin，上游仓库是 github.com/example/myapp",
+    "expected": "检测首次发布，引导选择发布方式，确认包类型和版本号策略"
   },
   {
     "id": 2,
-    "prompt": "我想把 FiraCode 字体发布到 AUR",
-    "expected": "确认是 -font 类型，arch=('any')，depends 包含 fontconfig，提醒命名规则（fira-code-font 或 font-firacode）"
+    "prompt": "帮我更新 autocli-bin 到最新版本",
+    "expected": "检测现有包，进入正常更新流程，获取最新版本并对比"
   },
   {
     "id": 3,
-    "prompt": "帮我更新 AUR 中的 myapp-bin 包版本到 2.0.0",
-    "expected": "读取现有 PKGBUILD，更新 pkgver 和重置 pkgrel=1，生成 .SRCINFO，提醒 workflow 自动计算 checksum"
+    "prompt": "首次发布一个字体包到 AUR，仓庯是 font-fira-code",
+    "expected": "检测字体包类型，引导 font-{name} 命名规则，确认 arch='any'"
   }
 ]
