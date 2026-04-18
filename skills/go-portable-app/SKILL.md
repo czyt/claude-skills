@@ -456,6 +456,48 @@ users, err := client.User.CreateBulk(bulk...).Save(ctx)
 
 ---
 
+## 边界条件与 Fallback
+
+### 常见问题处理
+
+| 问题 | 检测方式 | Fallback 方案 |
+|------|---------|--------------|
+| 前端构建失败 | `npm run build` 报错 | 检查 node 版本、依赖完整性 |
+| embed 找不到文件 | `embed: pattern matches no files` | 确认 `web/dist` 存在，先构建前端 |
+| SQLite 驱动错误 | `dialect "sqlite" is not supported` | 确认导入 `lib-x/entsqlite`，驱动名 `"sqlite3"` |
+| 数据库锁定 | `database is locked` | 已配置 `busy_timeout(10000)`，如频繁发生考虑 PostgreSQL |
+| CGO 编译失败 | `# runtime/cgo` 错误 | 确认 `CGO_ENABLED=0`，不导入需要 CGO 的包 |
+| 交叉编译失败 | 构建报错 | 检查 GOOS/GOARCH 组合是否正确 |
+
+### 开发环境 Fallback
+
+如果 SQLite 不满足需求：
+1. **测试环境** → 使用内存数据库 `file::memory:?cache=shared`
+2. **开发环境** → 切换 PostgreSQL（ent 支持多驱动）
+3. **生产环境** → 必须切换 PostgreSQL 或 MySQL
+
+### 前端嵌入 Fallback
+
+如果前端未构建：
+```bash
+# 开发模式：不嵌入，直接读取本地文件
+go run ./cmd/app  # 不加 -tags embed
+
+# 生产模式：必须先构建前端
+cd web && npm run build
+go build -tags embed -o bin/app ./cmd/app
+```
+
+### 迁移失败处理
+
+```bash
+# Atlas 迁移冲突
+atlas migrate hash --dir "file://ent/migrate/migrations"  # 重新生成校验
+
+# 回滚到指定版本
+atlas migrate down --dir ... --url ... --to <version>
+```
+
 ## 工具推荐
 
 - **热重载**: `air`
