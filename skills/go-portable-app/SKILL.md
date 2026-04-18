@@ -1,11 +1,11 @@
 ---
 name: go-portable-app
-description: Go portable application development agent for single-file deployment. Focuses on ent ORM + SQLite (entsqlite driver) + embed frontend. Use when developing Go apps with embedded resources, single-binary deployment, cross-platform compilation, or SQLite-based apps. Triggers: "portable go app", "单文件部署", "go embed", "entsqlite", "go portable", "嵌入式go应用", "single binary go", "cross compile go".
+description: Go portable application development agent for single-file deployment. Focuses on ent ORM + SQLite (entsqlite driver) + embed frontend + Wire/fx dependency injection. Use when developing Go apps with embedded resources, single-binary deployment, cross-platform compilation, or SQLite-based apps. Triggers: "portable go app", "单文件部署", "go embed", "entsqlite", "go portable", "嵌入式go应用", "single binary go", "cross compile go", "wire", "fx", "依赖注入".
 ---
 
 # Go Portable Application Development
 
-构建**单文件部署**的 Go 应用：前端嵌入 + SQLite 数据库 + 无 CGO 交叉编译。
+构建**单文件部署**的 Go 应用：前端嵌入 + SQLite 数据库 + 无 CGO 交叉编译 + Wire/fx 依赖注入。
 
 ---
 
@@ -15,6 +15,7 @@ description: Go portable application development agent for single-file deploymen
 2. **无 CGO 编译**：使用 `lib-x/entsqlite` 驱动，支持任意平台交叉编译
 3. **开发用 SQLite**：单文件数据库，WAL 模式提升并发
 4. **生产可切换**：ent 多驱动支持，生产环境切换 PostgreSQL
+5. **依赖注入可选**：Wire（编译时，推荐）或 fx（运行时）
 
 ---
 
@@ -505,6 +506,7 @@ atlas migrate down --dir ... --url ... --to <version>
 - **数据库驱动**: `lib-x/entsqlite`
 - **迁移**: `atlas`
 - **前端**: Vue/React（编译到 `web/dist`）
+- **依赖注入**: Wire（推荐，编译时）或 fx（运行时）
 
 ---
 
@@ -519,6 +521,7 @@ atlas migrate down --dir ... --url ... --to <version>
 | 交叉编译 | `GOOS=linux GOARCH=amd64 go build -tags embed ...` |
 | 测试 | `go test ./...` |
 | Ent 生成 | `go generate ./ent` |
+| Wire 生成 | `wire ./...` 或 `go generate ./...` |
 | 迁移创建 | `atlas migrate diff <name> ...` |
 
 ---

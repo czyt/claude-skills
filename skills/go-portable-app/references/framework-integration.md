@@ -1,6 +1,16 @@
 # Go 框架集成指南
 
-> fx + ent + Echo v5 集成，构建模块化的便携式应用
+> Wire/fx + ent + Echo v5 集成，构建模块化的便携式应用
+
+**依赖注入选择指南**：
+
+| 特性 | Wire（Google） | fx（Uber） |
+|------|---------------|------------|
+| 类型 | 编译时（代码生成） | 运行时（反射） |
+| 性能 | 更快（无反射开销） | 有反射开销 |
+| 错误检测 | 编译时检测 | 运行时检测 |
+| 适用场景 | 便携式应用、追求性能 | 大型应用、模块化需求 |
+| 调试难度 | 较低（可读生成代码） | 较高（运行时行为） |
 
 ---
 
@@ -465,6 +475,430 @@ func main() {
 
 ---
 
+## Google Wire 集成（推荐用于便携式应用）
+
+Wire 是 Google 的编译时依赖注入框架，通过代码生成实现，性能更好，适合便携式应用。
+
+### Wire 核心概念
+
+```go
+import "github.com/google/wire"
+
+// ProviderSet：一组 Provider 的集合
+var Set = wire.NewSet(NewA, NewB, NewC)
+
+// wire.Build：在 Injector 函数中声明依赖图
+func InitializeApp() *App {
+    wire.Build(NewA, NewB, NewC, NewApp)
+    return nil  // 实际返回值由 wire 生成
+}
+
+// go:generate 触发代码生成
+//go:generate wire
+```
+
+### Wire 核心函数
+
+| 函数 | 用途 |
+|------|------|
+| `wire.NewSet(...)` | 创建 ProviderSet，组织一组 Provider |
+| `wire.Build(...)` | 在 Injector 中声明依赖图 |
+| `wire.Bind(new(Interface), new(*Struct))` | 接口绑定 |
+| `wire.Value(T)` | 直接提供值（无需 Provider） |
+| `wire.Struct(new(T), "Field1", "Field2")` | 从结构体字段提取依赖 |
+| `wire.FieldsOf(new(T), "Field")` | 从已有结构体字段注入 |
+| `wire.InterfaceValue(new(Interface), value)` | 提供接口值 |
+
+---
+
+### Wire + ent + Echo 完整示例
+
+#### 1. 定义 Provider
+
+```go
+// data/wire.go
+package data
+
+import (
+    "context"
+    "github.com/google/wire"
+    "your-project/ent"
+    _ "github.com/lib-x/entsqlite"
+)
+
+// ProviderSet：数据层依赖集合
+var DataSet = wire.NewSet(NewEntClient, NewData)
+
+// Provider：创建 ent client
+func NewEntClient() (*ent.Client, error) {
+    client, err := ent.Open("sqlite3", 
+        "file:./data.db?cache=shared&_pragma=foreign_keys(1)&_pragma=journal_mode(WAL)&_pragma=synchronous(NORMAL)&_pragma=busy_timeout(10000)")
+    if err != nil {
+        return nil, err
+    }
+    
+    // 自动迁移
+    if err := client.Schema.Create(context.Background()); err != nil {
+        return nil, err
+    }
+    
+    return client, nil
+}
+
+// Provider：创建 Data 结构
+func NewData(client *ent.Client) *Data {
+    return &Data{Client: client}
+}
+
+type Data struct {
+    Client *ent.Client
+}
+
+func (d *Data) Close() error {
+    return d.Client.Close()
+}
+```
+
+#### 2. 定义 Server Provider
+
+```go
+// server/wire.go
+package server
+
+import (
+    "embed"
+    "io/fs"
+    "net/http"
+    
+    "github.com/google/wire"
+    "github.com/labstack/echo/v5"
+    "github.com/labstack/echo/v5/middleware"
+    "your-project/data"
+)
+
+// ProviderSet：服务器依赖集合
+var ServerSet = wire.NewSet(NewEcho, NewRouter, NewFrontendFS)
+
+// Provider：创建 Echo 实例
+func NewEcho() *echo.Echo {
+    e := echo.New()
+    e.Use(middleware.Logger())
+    e.Use(middleware.Recover())
+    e.Use(middleware.CORS())
+    return e
+}
+
+// Provider：创建路由器
+func NewRouter(e *echo.Echo, d *data.Data) *Router {
+    return &Router{
+        Echo:  e,
+        Data:  d,
+    }
+}
+
+type Router struct {
+    Echo *echo.Echo
+    Data *data.Data
+}
+
+// Provider：创建前端文件系统
+func NewFrontendFS() (http.FileSystem, error) {
+    //go:embed web/dist
+    var webFS embed.FS
+    distFS, err := fs.Sub(webFS, "web/dist")
+    if err != nil {
+        return nil, err
+    }
+    return http.FS(distFS), nil
+}
+```
+
+#### 3. 定义 Handler Provider
+
+```go
+// handler/wire.go
+package handler
+
+import (
+    "github.com/google/wire"
+    "github.com/labstack/echo/v5"
+    "your-project/data"
+)
+
+// ProviderSet：Handler 依赖集合
+var HandlerSet = wire.NewSet(
+    NewUserHandler,
+    NewAuthHandler,
+)
+
+func NewUserHandler(d *data.Data) *UserHandler {
+    return &UserHandler{Data: d}
+}
+
+func NewAuthHandler(d *data.Data) *AuthHandler {
+    return &AuthHandler{Data: d}
+}
+
+type UserHandler struct { Data *data.Data }
+type AuthHandler struct { Data *data.Data }
+```
+
+#### 4. 定义 Injector
+
+```go
+// wire.go（主包）
+package main
+
+import (
+    "github.com/google/wire"
+    "your-project/data"
+    "your-project/server"
+    "your-project/handler"
+)
+
+// 超级集合：组合所有 ProviderSet
+var SuperSet = wire.NewSet(
+    data.DataSet,
+    server.ServerSet,
+    handler.HandlerSet,
+    NewApp,
+)
+
+// Injector：Wire 生成初始化函数
+func InitializeApp() (*App, error) {
+    wire.Build(SuperSet)
+    return nil, nil
+}
+
+//go:generate wire
+```
+
+#### 5. App 结构和启动
+
+```go
+// app.go
+package main
+
+import (
+    "net/http"
+    
+    "github.com/labstack/echo/v5"
+    "your-project/data"
+    "your-project/handler"
+    "your-project/server"
+)
+
+type App struct {
+    Echo       *echo.Echo
+    Router     *server.Router
+    Data       *data.Data
+    FrontendFS http.FileSystem
+}
+
+func NewApp(
+    e *echo.Echo,
+    r *server.Router,
+    d *data.Data,
+    fs http.FileSystem,
+) (*App, error) {
+    return &App{
+        Echo:       e,
+        Router:     r,
+        Data:       d,
+        FrontendFS: fs,
+    }, nil
+}
+
+func (a *App) SetupRoutes() {
+    api := a.Echo.Group("/api/v1")
+    
+    // 注册 Handler
+    uh := &handler.UserHandler{Data: a.Data}
+    api.GET("/users", uh.List)
+    api.POST("/users", uh.Create)
+    
+    // 前端兜底
+    a.Echo.StaticFS("/", a.FrontendFS)
+}
+
+func (a *App) Run() error {
+    a.SetupRoutes()
+    return a.Echo.Start(":8080")
+}
+
+func (a *App) Close() error {
+    return a.Data.Close()
+}
+
+// main.go
+package main
+
+import "log"
+
+func main() {
+    app, err := InitializeApp()
+    if err != nil {
+        log.Fatalf("failed to initialize app: %v", err)
+    }
+    defer app.Close()
+    
+    if err := app.Run(); err != nil {
+        log.Fatalf("failed to run app: %v", err)
+    }
+}
+```
+
+---
+
+### Wire 高级用法
+
+#### 接口绑定
+
+```go
+// 定义接口
+type Repository interface {
+    Find(id string) (*User, error)
+    Save(user *User) error
+}
+
+// 实现接口
+type EntRepository struct {
+    Client *ent.Client
+}
+
+func NewEntRepository(client *ent.Client) *EntRepository {
+    return &EntRepository{Client: client}
+}
+
+// Wire 绑定接口到实现
+var RepoSet = wire.NewSet(
+    NewEntRepository,
+    wire.Bind(new(Repository), new(*EntRepository)),
+)
+```
+
+#### 结构体字段注入
+
+```go
+// wire.Struct：自动从结构体提取字段作为依赖
+var Set = wire.NewSet(
+    wire.Struct(new(Config), "DB", "Port"),  // 只注入 DB 和 Port
+    wire.Struct(new(Config), "*"),           // 注入所有字段
+)
+
+type Config struct {
+    DB   *ent.Client
+    Port int
+    Host string  // 不注入（如果使用 wire.Struct(new(Config), "DB", "Port")）
+}
+```
+
+#### 值绑定
+
+```go
+// wire.Value：直接提供值，无需 Provider
+var ConfigSet = wire.NewSet(
+    wire.Value(Config{Port: 8080}),
+    wire.InterfaceValue(new(http.FileSystem), http.Dir("static")),
+)
+
+// wire.FieldsOf：从已有结构体提取字段
+var Set = wire.NewSet(
+    wire.FieldsOf(new(AppConfig), "DB"),  // 提取 AppConfig.DB 字段
+)
+```
+
+---
+
+### Wire 生成代码示例
+
+运行 `wire` 后生成的代码：
+
+```go
+// wire_gen.go（自动生成）
+// Code generated by wire. DO NOT EDIT.
+
+package main
+
+import (
+    "your-project/data"
+    "your-project/server"
+    "your-project/handler"
+)
+
+func InitializeApp() (*App, error) {
+    client, err := data.NewEntClient()
+    if err != nil {
+        return nil, err
+    }
+    d := data.NewData(client)
+    e := server.NewEcho()
+    r := server.NewRouter(e, d)
+    fs, err := server.NewFrontendFS()
+    if err != nil {
+        return nil, err
+    }
+    app, err := NewApp(e, r, d, fs)
+    if err != nil {
+        return nil, err
+    }
+    return app, nil
+}
+```
+
+---
+
+### Wire vs fx 对比选择
+
+| 场景 | 推荐 |
+|------|------|
+| 便携式应用、单文件部署 | **Wire**（编译时，无反射） |
+| 追求最佳性能 | **Wire** |
+| 需要编译时错误检测 | **Wire** |
+| 大型应用、复杂模块化 | fx（运行时灵活） |
+| 动态加载模块 | fx（Wire 不支持） |
+| 团队已熟悉 Uber 技术栈 | fx |
+
+---
+
+### Wire 常见问题
+
+#### 生成代码不更新
+
+```bash
+# 清理并重新生成
+go clean
+wire ./...
+```
+
+#### 循环依赖
+
+```
+wire: cycle detected: A -> B -> C -> A
+```
+
+**解决**：重构 Provider，打破循环依赖
+
+#### 缺少 Provider
+
+```
+wire: no provider found for *ent.Client
+```
+
+**解决**：添加对应的 Provider 到 ProviderSet
+
+---
+
+### Wire 最佳实践
+
+1. **每个包一个 ProviderSet**：按功能组织
+2. **Injector 放在主包**：统一入口
+3. **接口绑定显式声明**：避免隐式依赖
+4. **生成代码检查**：查看 wire_gen.go 确认依赖图
+5. **go:generate 注释**：方便 `go generate ./...` 触发
+
+---
+
 ## WrapHandler 转换标准 HTTP Handler
 
 ```go
@@ -519,3 +953,5 @@ func (h *UserHandler) Update(c echo.Context) error {
 - [Echo Middleware](https://echo.labstack.com/docs/category/middleware)
 - [Ent Documentation](https://entgo.io/docs)
 - [Uber fx](https://pkg.go.dev/go.uber.org/fx)
+- [Google Wire](https://pkg.go.dev/github.com/google/wire)
+- [Wire Tutorial](https://github.com/google/wire/blob/main/_tutorial/README.md)
