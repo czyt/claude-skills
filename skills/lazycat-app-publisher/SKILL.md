@@ -996,7 +996,7 @@ application:
 
 ## Critical Rules
 
-### 🚨 TOP 5 CRITICAL RULES
+### 🚨 TOP 7 CRITICAL RULES
 
 执行转换时，**遇到以下情况必须暂停并询问用户**：
 
@@ -1048,6 +1048,59 @@ min_os_version: 1.5.0  # ✅ 必须设置
 **⚠️ 检查点**: 检测到密码字段（如 `PASSWORD`, `SECRET_KEY`, `ADMIN_PASSWORD`）时，**强制询问**：
 - 「检测到密码体系，请选择免密登录方案：[简单自动填充 / 三阶段联动 / Basic Auth]」
 - 用户确认后才能继续生成配置
+
+#### ⚠️ Rule 6: usage 字段只支持字符串形式（防止幻觉）
+`usage` 是简单字符串字段，**不支持嵌套结构**：
+
+```yaml
+# ✅ 正确：字符串形式
+usage: "简单使用说明"
+usage: |
+  多行使用说明
+  第二行内容
+
+# ❌ 错误：幻觉生成的嵌套结构
+usage:
+  intro: "应用介绍"    # ❌ 不存在
+  steps:              # ❌ 不存在
+    - "第一步"
+  tips: "提示"         # ❌ 不存在
+```
+
+**⚠️ 检查点**: 生成 `usage` 时，只生成字符串内容，不要生成任何嵌套字段结构。详见 [strict-constraints.md](references/strict-constraints.md) 的 usage 字段章节。
+
+#### ⚠️ Rule 7: 免密登录 when 路径必须与实际登录页匹配
+`when` 条件的路径判定不正确会导致：
+
+- Web 打开应用时无法自动填充密码
+- 用户登录失败或需要手动输入密码
+- 免密登录完全失效
+
+**⚠️ 检查点**: 配置免密登录时，**必须先确认实际登录页路径**：
+
+| 步骤 | 操作 |
+|------|------|
+| 1 | 在浏览器中打开应用，进入登录页 |
+| 2 | 复制浏览器地址栏的完整路径 |
+| 3 | 根据实际路径配置 `when` 条件 |
+| 4 | 验证自动填充是否生效 |
+
+**常见应用登录页路径对照表**（见 [passwordless-login.md](references/passwordless-login.md)）：
+
+| 应用 | 实际登录页路径 |
+|------|---------------|
+| Jellyfin | `/web/#/login.html` |
+| WordPress | `/wp-login.php` |
+| Portainer | `/#/login` |
+
+**错误示例**：
+```yaml
+# ❌ 错误：when 路径不匹配实际登录页
+injects:
+  - id: login
+    when:
+      - /login    # ❌ Jellyfin 实际登录页是 /web/#/login.html
+```
 
 ---
 

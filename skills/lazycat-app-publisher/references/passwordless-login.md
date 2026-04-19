@@ -338,6 +338,86 @@ injects:
           passwordSelector: "#password-field"
 ```
 
+### ⚠️ 错误 4：when 路径判定不匹配导致登录失败（关键）
+
+**问题描述：** 当 `when` 条件中的路径与实际应用的登录页路径不匹配时，inject 不会触发，导致：
+
+- Web 打开应用时无法自动填充密码
+- 用户登录失败或需要手动输入密码
+- 免密登录完全失效
+
+**常见原因：**
+
+1. **路径前缀不匹配**：应用实际登录页可能有子路径前缀
+2. **hash 路由判断错误**：SPA 应用使用 hash 路由，路径格式与预期不同
+3. **相对路径问题**：when 使用相对路径，但应用使用绝对路径
+4. **多入口应用**：应用有多个入口点，inject 只匹配了一个
+
+**错误示例：**
+
+```yaml
+# ❌ 错误：when 路径不匹配实际登录页
+application:
+  subdomain: jellyfin
+  upstreams:
+    - location: /
+      backend: http://jellyfin:8096/
+  injects:
+    - id: login-autofill
+      when:
+        - /login           # ❌ Jellyfin 实际登录页是 /web/#/login.html
+        - /#/login         # ❌ 这个 hash 路径也不匹配
+```
+
+**诊断方法：**
+
+1. **实际打开应用**：在浏览器中打开应用，观察登录页的完整 URL
+2. **检查路径结构**：
+   - 是否有子路径前缀？（如 `/web/`、`/admin/`）
+   - 是否使用 hash 路由？（如 `/#/login`）
+3. **复制实际路径**：从浏览器地址栏复制实际登录页路径
+
+**正确做法：**
+
+```yaml
+# ✅ 正确：先确认实际登录页路径，再配置 when
+# 步骤 1：打开应用，观察 URL
+# 例如 Jellyfin 登录页 URL：https://xxx.lzcapp.cn/web/#/login.html
+
+# 步骤 2：根据实际 URL 配置 when
+application:
+  injects:
+    - id: login-autofill
+      when:
+        - /web/*#/login.html*   # ✅ 匹配 Jellyfin 实际登录页
+        - /web/*#/startup/login* # ✅ 匹配初始化登录页
+```
+
+**⚠️ 检查点：配置免密登录时，必须先确认实际登录页路径！**
+
+| 步骤 | 操作 |
+|------|------|
+| 1 | 打开应用，进入登录页 |
+| 2 | 复制浏览器地址栏的完整路径 |
+| 3 | 根据实际路径配置 `when` 条件 |
+| 4 | 测试验证自动填充是否生效 |
+
+**常见应用的登录页路径对照：**
+
+| 应用 | 实际登录页路径 | 正确的 when 配置 |
+|------|---------------|-----------------|
+| Jellyfin | `/web/#/login.html` | `/web/*#/login.html*` |
+| WordPress | `/wp-login.php` | `/wp-login.php` |
+| Portainer | `/#/login` | `/#/login` |
+| Home Assistant | `/` (首页即登录) | `/` |
+| Nginx Proxy Manager | `/login` | `/login` |
+| Nextcloud | `/login` | `/login` |
+
+**特别提醒：**
+- 对于 SPA 应用，登录页通常是 hash 路由（如 `/#/login`），需要正确匹配 hash 部分
+- 某些应用的登录页可能有动态参数（如 `?redirect=xxx`），使用通配符匹配
+- 如果不确定路径，先用最宽松的匹配（如 `/*`），再逐步收紧
+
 ---
 
 ## 典型应用的免密配置模板
@@ -451,5 +531,5 @@ application:
 
 ---
 
-**最后更新**: 2026-04-14
+**最后更新**: 2026-04-19
 **基于**: 懒猫开发者文档 advanced-inject-passwordless-login.md
