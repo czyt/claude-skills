@@ -40,6 +40,21 @@ Check firmware: `blink1-tool --fwversion`
 | Read color | `blink1-tool --lastcolor` |
 | Firmware version | `blink1-tool --fwversion` |
 
+## Quick Start (3 Steps)
+
+```bash
+# 1. 检测设备
+blink1-tool --list           # 应显示设备ID
+
+# 2. 设置颜色（验证工作）
+blink1-tool --rgb=255,0,0    # 红灯亮起 = 成功
+
+# 3. 关闭设备
+blink1-tool --off
+```
+
+如果 Step 1 无输出 → 见 [Troubleshooting](#troubleshooting)
+
 ## Color Control
 
 ### RGB Values
@@ -177,7 +192,7 @@ blink1-tool --list
 # If empty output:
 # 1. Physical: check USB connection
 # 2. Linux: run --add_udev_rules, replug, or try with sudo
-# 3. Permission: ensure user in plugdev group
+# 3. Permission: user must be in plugdev group (may need restart)
 ```
 
 ### Permission Denied (Linux)
@@ -189,9 +204,15 @@ blink1-tool --add_udev_rules
 # Option 2: Temporary sudo
 sudo blink1-tool --list
 
-# Option 3: Add user to plugdev group
+# Option 3: Add user to plugdev group (persistent)
+# If plugdev group doesn't exist:
+sudo groupadd plugdev
+
+# Add user to group:
 sudo usermod -a -G plugdev $USER
-# Logout and login again
+
+# MUST restart system for group change to take effect
+# (logout/login may not be sufficient)
 ```
 
 ## Common Mistakes
