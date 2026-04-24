@@ -11,6 +11,19 @@ blink1-tool controls ThingM blink(1) USB LED devices. Supports RGB/HSB colors, f
 
 **Quick Fix**: If device not detected on Linux, run `blink1-tool --add_udev_rules` then replug. See [Troubleshooting](#troubleshooting) for details.
 
+### Version Compatibility
+
+| Feature | mk1 | mk2 | mk3 |
+|---------|-----|-----|-----|
+| Multi-LED (top/bottom) | ✗ | ✓ | ✓ |
+| Save pattern to flash | ✗ | ✓ | ✓ |
+| Startup params | ✗ | v206+ | ✓ |
+| Bootloader access | ✗ | ✗ | ✓ |
+| User notes | ✗ | ✗ | ✓ |
+| LED count | 1 | 2 | 2 |
+
+Check firmware: `blink1-tool --fwversion`
+
 ## Quick Reference
 
 | Action | Command |
