@@ -12,7 +12,7 @@ This document maps LazyCat OS versions to their features, helping you determine 
 | `application.upstreams` | v1.3.8 | Recommended over `routes` |
 | `services.[].mem_limit` | v1.3.8 | Memory limits |
 | `services.[].shm_size` | v1.3.8 | Shared memory size |
-| `sysbox-runc` runtime | v1.3.8 | For privileged containers (dockerd, systemd) |
+| `sysbox-runc` runtime | v1.3.8 | Legacy isolated runtime capability; long-lived Docker/system environments should use LightOS |
 | Multi-entry points | v1.4.3 | `application.entries` |
 | `api_auth_token` | v1.4.3 | For external API access |
 | `disable_trim_location` | v1.3.9 | Keep URL path in upstream |
@@ -21,7 +21,7 @@ This document maps LazyCat OS versions to their features, helping you determine 
 | **lzc-cli v2.0.0+** | **v1.5.0** | **Required for LPK v2** |
 | Network isolation | v1.3.0 | Cross-app via `$service.$appid.lzcapp` |
 | `permissions` in package.yml | v1.5.0 | Declarative permission system |
-| `ext_config.enable_document_access` | v1.5.0 | Required for document access |
+| `ext_config.enable_document_access` | v1.5.0 | Enables deprecated `/lzcapp/run/mnt/home` compatibility path; v1.7.0+ also requires administrator authorization |
 | **App Interconnect (`.lzcx`)** | **v1.5.2** | **应用间 HTTP 访问，`app.<pkg>.lzcx` 地址** |
 | **`lzcapp.self_delegate` / `lzcapp.user_delegate`** | **v1.5.2** | **应用间访问权限声明** |
 | **`import_resources`** | **v1.5.2** | **`package.yml` 中声明导入 Skill/MCP 资源** |
@@ -30,6 +30,8 @@ This document maps LazyCat OS versions to their features, helping you determine 
 | **`run_as` (UID/GID + owner 映射)** | **v1.6.0+** | **容器数字 UID/GID + `/lzcapp` 持久目录 owner 映射** ⭐ |
 | **`hidden_from_launcher`** | **v1.5.3** | **从启动器隐藏应用入口（不影响访问地址/权限/部署）** |
 | **`user.notify` 权限** | **v1.6.0** | **向用户发送通知，注入 `/lzcinit/notify-send` 二进制** |
+| **`fuse.mount` 权限** | **v1.6.1** | **注入 `/lzcinit/fusermount3` 并将 `/lzcinit` 加入 `PATH`** |
+| **`vt.display` + `application.vt`** | **v1.6.1** | **物理显示器 VT；所有 service 必须使用 `runc`** |
 | **文件选择器拦截** | **v1.5.0+** | **应用商店强制要求：有上传/下载功能必须接入** ⭐ |
 
 ---
@@ -81,13 +83,13 @@ app.lpk (zip format)
 - **LPK v2 format**: Tar-based, requires `package.yml`, supports embedded images
 - **Declarative permissions**: `permissions` field in `package.yml`
 - **New document path**: `/lzcapp/documents` (plural)
-- **Document access control**: `ext_config.enable_document_access`
+- **Private app documents**: `document.private` + `/lzcapp/documents/<uid>`
 - **lzc-cli v2.0.0+**: New `project` workflow commands
 
 **Compatibility Changes:**
 - `/lzcapp/document` and `/lzcapp/run/mnt/home` are deprecated
 - Document access root path is now `/lzcapp/documents`
-- Applications needing document access must set `ext_config.enable_document_access: true`
+- `ext_config.enable_document_access` only enables deprecated `/lzcapp/run/mnt/home`; v1.7.0+ also requires administrator authorization
 - Static metadata must be in `package.yml` (not `lzc-manifest.yml`)
 
 **Migration to LPK v2:**
@@ -117,14 +119,13 @@ application:
 binds:
   - /lzcapp/document:/data/documents
 
-# After v1.5.0
-ext_config:
-  enable_document_access: true
+# After v1.5.0: package.yml
+permissions:
+  required:
+    - document.private
 
-services:
-  app:
-    binds:
-      - /lzcapp/documents:/data/documents
+# Application code writes user-managed files to:
+# /lzcapp/documents/<uid>
 ```
 
 ### v1.4.3
@@ -224,9 +225,18 @@ services:
 - **Skill/MCP directory**: Standard `resources/skills/<id>/SKILL.md` and `resources/mcp-providers/<id>/mcp.yml`
 - **New permissions**: `device.dri.master`, `device.block`, `fuse.mount`, `net.admin`, `appvar.other.read`, `appvar.other.write`, `power.shutdown.inhibit`, `lightos.use`, `lightos.manage`
 
+> `fuse.mount` permission id may appear in older schemas, but the injected `fusermount3` compatibility contract requires lzcos v1.6.1+.
+
 **Required for:**
 - App-to-app HTTP communication (`app.<pkg>.lzcx`)
 - Exposing/consuming Skill and MCP resources
+
+### v1.6.1
+
+**New Features:**
+- `fuse.mount` injects `/lzcinit/fusermount3` and puts `/lzcinit` on `PATH` for standard FUSE clients.
+- `vt.display` plus `application.vt: true` enables the app physical-display VT and `/lzcinit/vt.active`.
+- VT apps cannot use `sysbox-runc`; every service must use the default `runc` runtime.
 
 ### v1.3.0
 
@@ -242,15 +252,16 @@ services:
 ### Recommendation
 
 ```yaml
-# Recommended for most modern applications
-min_os_version: 1.3.8  # 如果使用 run_as 请设为 1.6.0+
+# Recommended baseline for LPK v2
+min_os_version: 1.5.0  # 使用更高版本特性时继续上调
 ```
 
 ### Decision Guide
 
 | If Using | Set min_os_version |
 |----------|-------------------|
-| Basic manifest only | `1.3.0` |
+| Basic manifest only (LPK v1) | `1.3.0` |
+| LPK v2 / `package.yml` | `1.5.0` |
 | `upstreams`, `mem_limit`, `shm_size` | `1.3.8` |
 | `healthcheck` (services) | `1.4.1` |
 | Multi-entry points | `1.4.3` |
@@ -262,6 +273,8 @@ min_os_version: 1.3.8  # 如果使用 run_as 请设为 1.6.0+
 | `run_as` (UID/GID owner 映射) | `1.6.0` |
 | `hidden_from_launcher` | `1.5.3` |
 | `user.notify` 权限 | `1.6.0` |
+| `fuse.mount` helper contract | `1.6.1` |
+| Physical-display VT | `1.6.1` |
 | 文件选择器拦截（应用商店强制） | `1.5.0` |
 
 ---
@@ -297,10 +310,9 @@ healthcheck:
 For applications accessing user documents:
 
 ```yaml
-# Add to manifest for v1.5.0+
-ext_config:
-  enable_document_access: true
+# Add document.private to package.yml, then update application paths:
+# /lzcapp/document → /lzcapp/documents/<uid>
 
-# Update paths
-# /lzcapp/document → /lzcapp/documents
+# Only legacy /lzcapp/run/mnt/home compatibility uses:
+# ext_config.enable_document_access: true
 ```

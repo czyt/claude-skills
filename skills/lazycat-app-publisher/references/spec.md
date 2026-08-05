@@ -28,7 +28,7 @@
 2. 自 `LPK v2` 起，静态包元数据统一放入 `package.yml`，包括 `package`、`version`、`name`、`description`、`locales`、`author`、`license`、`homepage`、`min_os_version`、`unsupported_platforms`、`admin_only`、`hidden_from_launcher` 与 `permissions`。
 3. `lzc-manifest.yml` 只保留运行结构字段：`application`、`services`、`ext_config`、`usage`。
 4. `LPK v1` 仍兼容旧布局，允许这些静态字段继续保留在 `lzc-manifest.yml` 顶层。
-5. 对于需要访问用户文稿的应用，必须在 `ext_config` 中声明 `enable_document_access: true`（v1.5.0+）。
+5. 私有应用文稿使用 `package.yml.permissions.required: [document.private]` 和 `/lzcapp/documents/<uid>`；`ext_config.enable_document_access` 只用于废弃的 `/lzcapp/run/mnt/home` 兼容路径。
 
 ## 二、顶层数据结构 `ManifestConfig`
 
@@ -59,7 +59,7 @@
 | `service` | `string` | 服务容器的名称，若为空，则为 `app` |
 | `description` | `string` | 服务描述 |
 | `publish_port` | `string` | 允许的入站端口号，可以为具体的端口号或 `1000~50000` 这种端口范围 |
-| `send_port_info` | `bool` | 以 little ending 发送 uint16 类型的实际入站端口给目标端口后再进行数据转发 |
+| `send_port_info` | `bool` | 仅 TCP；在业务数据前写入 2 字节 little-endian `uint16` 原始入站端口 |
 | `yes_i_want_80_443` | `bool` | 为 true 则允许将 80,443 流量转发到应用，此时流量完全绕过系统，鉴权、唤醒等都不会生效 |
 
 **示例：**
@@ -92,6 +92,7 @@ application:
 | `usb_accel` | `bool` | 挂载相关设备到所有服务容器内的 `/dev/bus/usb` |
 | `gpu_accel` | `bool` | 挂载相关设备到所有服务容器内的 `/dev/dri` |
 | `kvm_accel` | `bool` | 挂载相关设备到所有服务容器内的 `/dev/kvm` 和 `/dev/vhost-net` |
+| `vt` | `bool` | 启用物理显示器 VT（v1.6.1+）；必须声明 `vt.display`，且所有 service 不得使用 `sysbox-runc` |
 | `depends_on` | `[]string` | 依赖的其他容器服务，仅支持本应用内的其他服务 |
 
 ### 4.2 功能配置
@@ -182,26 +183,31 @@ services:
 
 | 字段名 | 类型 | 描述 |
 | ---- | ---- | ---- |
-| `enable_document_access` | `bool` | 如果为 true 则挂载用户文稿目录到 `/lzcapp/documents`（v1.5.0+） |
+| `enable_document_access` | `bool` | 启用废弃兼容路径 `/lzcapp/run/mnt/home`；v1.7.0+ 还需管理员明确授权 |
 | `enable_media_access` | `bool` | 如果为 true 则将 media 目录挂载到 `/lzcapp/media` |
 | `disable_grpc_web_on_root` | `bool` | 如果为 true 则不再劫持应用的 grpc-web 流量 |
 | `default_prefix_domain` | `string` | 会调整启动器中点击应用后打开的最终域名，可以写任何不含 `.` 的字符串 |
 
 **说明：**
 
-1. `enable_document_access` 在 v1.5.0+ 中需要配合 `permissions` 中的 `document.read` 或 `document.write` 使用
-2. 旧路径 `/lzcapp/document` 已废弃，新代码请使用 `/lzcapp/documents`（复数形式）
+1. `enable_document_access` 只用于旧用户文稿兼容路径，不会启用私有应用文稿。
+2. 私有应用文稿需声明 `document.private`，实际数据路径固定为 `/lzcapp/documents/<uid>`。
+3. 数据库、索引、内部配置、缓存和运行状态不得写入应用文稿；分别使用 `/lzcapp/var` 或 `/lzcapp/cache`。
 
 **示例：**
 
 ```yaml
 ext_config:
-  enable_document_access: true
+  enable_document_access: true  # 仅兼容 /lzcapp/run/mnt/home
+```
 
-services:
-  app:
-    binds:
-      - /lzcapp/documents:/app/data/documents
+```yaml
+# package.yml：启用当前应用自己的私有文稿
+permissions:
+  required:
+    - document.private
+
+# 应用代码写入 /lzcapp/documents/<uid>
 ```
 
 ---
@@ -261,7 +267,15 @@ application:
 
 ---
 
-## 九、`UpstreamConfig` 配置 (HTTP 路由)
+## 九、`HandlersConfig` 配置（已废弃）
+
+`application.handlers` 已废弃。不要生成 `acl_handler` 或 `error_page_templates`；请求处理迁移到 `application.injects` 的 `request` 阶段，响应与错误页处理迁移到 `response` 阶段。
+
+`services.*.handlers` 不是合法 Manifest 字段。容器生命周期逻辑应放入镜像 entrypoint、`command`、`setup_script` 或应用进程本身。
+
+---
+
+## 十、`UpstreamConfig` 配置 (HTTP 路由)
 
 | 字段名 | 类型 | 描述 |
 | ---- | ---- | ---- |
@@ -298,7 +312,7 @@ application:
 
 ---
 
-## 十、本地化 `I10nConfigItem` 配置
+## 十一、本地化 `I10nConfigItem` 配置
 
 配置 `locales` 使应用支持多语言，支持设置的 language key 规范可参考 BCP 47 标准。
 
@@ -373,7 +387,7 @@ locales:
 | `net.internet` | 访问互联网 | 允许应用访问公网网络资源 |
 | `net.lan` | 访问局域网 | 允许应用访问当前局域网内的设备与服务 |
 | `net.host` | 使用宿主网络 | 允许应用使用宿主网络 |
-| `document.private` | 私有文稿 | 允许应用使用 `/lzcapp/documents/$uid` 私有文稿目录 |
+| `document.private` | 私有文稿 | 允许使用 `/lzcapp/documents/$uid`；只保存用户可理解和管理的文件，卸载应用时默认保留 |
 | `document.read` | 读取文稿 | 允许应用读取用户文稿目录中的内容 |
 | `document.write` | 写入文稿 | 允许应用修改或写入用户文稿目录中的内容 |
 | `media.read` | 读取媒体 | 允许应用读取系统媒体目录中的内容 |
@@ -384,7 +398,8 @@ locales:
 | `compose.override` | 高危运行时覆盖 | 允许应用通过 Compose Override 覆盖最终运行时配置 |
 | `device.dri.master` | 访问 DRI Master | 允许应用访问 DRI master 设备 |
 | `device.block` | 访问块设备 | 允许应用访问块设备相关能力 |
-| `fuse.mount` | 挂载 FUSE 文件系统 | 允许应用自行挂载 FUSE 文件系统 |
+| `fuse.mount` | 挂载 FUSE 文件系统 | lzcos v1.6.1+；注入 `/lzcinit/fusermount3` 并将 `/lzcinit` 加入 `PATH` |
+| `vt.display` | 使用 VT 显示 | lzcos v1.6.1+；还需 `application.vt: true`，且所有 service 使用 `runc` |
 | `net.admin` | 网络管理 | 允许应用执行高危网络管理操作 |
 | `appvar.other.read` | 读取其他应用数据 | 允许应用读取其他应用实例的 appvar 数据 |
 | `appvar.other.write` | 写入其他应用数据 | 允许应用修改其他应用实例的 appvar 数据 |
@@ -645,11 +660,14 @@ envs:
 compose_override:
   services:
     app:
+      cap_drop:
+        - SETCAP
+        - MKNOD
       volumes:
-        - /var/run/docker.sock:/var/run/docker.sock
-      devices:
-        - /dev/ttyUSB0:/dev/ttyUSB0
+        - /data/playground:/lzcapp/run/playground:ro
 ```
+
+`compose_override` 不承诺兼容性；使用前应向官方确认。若原应用依赖 Docker socket、Dockerd 或长期运行 Docker Compose，应改用 LightOS，而不是把宿主 socket 写入 LPK。
 
 ---
 
@@ -796,6 +814,16 @@ services:
       - IS_MULTI_INSTANCE={{.S.IsMultiInstance}}
 ```
 
+| 参数 | 语义 |
+|------|------|
+| `.BoxName` | 微服名称 |
+| `.BoxDomain` | 微服域名 |
+| `.OSVersion` | 系统版本；测试版可能为 `v99.99.99-xxx` |
+| `.AppDomain` | 当前应用实例域名 |
+| `.IsMultiInstance` | 当前应用是否多实例部署 |
+| `.DeployUID` | 部署用户 UID；单实例下无实际意义 |
+| `.DeployID` | 当前应用实例唯一 ID |
+
 ---
 
 ## 5. Service Domain 命名规则
@@ -896,30 +924,13 @@ services:
 
 ---
 
-## 9. Dockerd 支持
+## 9. Docker / Dockerd 使用边界
 
-使用 `sysbox-runc` 运行时支持在容器内运行 Docker：
+官方当前建议：需要在微服上运行 Docker、Docker Compose，或按传统 NAS 方式长期维护容器环境时，使用 LightOS，并在 LightOS 实例内按常规 Linux 方式安装 Docker。实例内的软件、配置和 Docker 数据会随实例持久保存。
 
-```yaml
-services:
-  dockge:
-    image: louislam/dockge:latest
-    runtime: sysbox-runc  # 必需
-    binds:
-      - /lzcapp/var/stacks:/opt/stacks
-      - /data/playground/docker.sock:/var/run/docker.sock
-```
+LPK 仍用于面向普通用户分发独立、可复现的一键安装应用。不要继续从旧文档复制 Dockge、`pg-docker`、Playground socket 或通过 `compose_override` 暴露宿主 Docker socket 的方案。
 
-**compose_override 配置：**
-
-```yaml
-# lzc-build.yml
-compose_override:
-  services:
-    dockge:
-      volumes:
-        - /data/playground/docker.sock:/var/run/docker.sock
-```
+LightOS 拥有较高权限，只开放给可信用户或可信管理应用。lzcos 的 SSH 系统为只读系统，直接安装或修改的系统内容重启后会丢失。
 
 ---
 

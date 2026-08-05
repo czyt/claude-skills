@@ -63,9 +63,14 @@ envs:
 compose_override:
   services:
     app:
+      cap_drop:
+        - SETCAP
+        - MKNOD
       volumes:
-        - /var/run/docker.sock:/var/run/docker.sock
+        - /data/playground:/lzcapp/run/playground:ro
 ```
+
+`compose_override` 不承诺兼容性，涉及宿主路径或高级权限前必须向官方确认。需要 Docker socket、Dockerd 或 Docker Compose 管理环境时使用 LightOS，不要生成 LPK socket 挂载。
 
 ### ❌ 错误示例
 
@@ -291,14 +296,18 @@ locales:
 | LPK v1 (zip) | 无限制 | 兼容所有版本 |
 | 使用 `/lzcapp/documents` | **1.5.0** | 新文档路径 |
 | 使用 `permissions` | **1.5.0** | 权限声明系统 |
+| 使用 `fuse.mount` | **1.6.1** | 注入 `fusermount3` helper |
+| 使用物理显示器 VT | **1.6.1** | `vt.display` + `application.vt` |
 
 ### ⚠️ 权限自动分析（根据 binds 路径）
 
 **重要：当 `binds` 包含特定路径时，必须在 `permissions` 中声明对应权限！**
 
+在做路径映射前先分类数据：数据库、索引、内部配置、运行状态写入 `/lzcapp/var`，可重建缓存写入 `/lzcapp/cache`；只有用户能直接理解、打开、迁移或管理的文件才能写入 `/lzcapp/documents/<uid>`。应用文稿默认不随卸载清理。
+
 | binds 路径前缀 | 必需权限 id | 声明位置 | 说明 |
 |---------------|------------|----------|------|
-| `/lzcapp/documents` | `document.private` | `permissions.required` | 应用文稿目录，必须声明 |
+| `/lzcapp/documents` | `document.private` | `permissions.required` | 应用文稿根目录；实际数据必须写入 `<uid>` 子目录 |
 | `/lzcapp/documents/${uid}` | `document.private` | `permissions.required` | 用户隔离文稿目录 |
 | `/lzcapp/run/mnt/home` | `document.read` + `document.write` | `permissions.required` | 兼容旧路径（v1.7.0+ 需授权） |
 | `/lzcapp/media/RemoteFS` | `media.read` | `permissions.optional` | 懒猫网盘挂载（需 enable_media_access） |
@@ -320,7 +329,7 @@ locales:
 services:
   filebrowser:
     binds:
-      - /lzcapp/documents:/data  # ✅ 挂载应用文稿目录
+      - /lzcapp/documents:/data  # ✅ 应用实际写入 /data/<uid>
 
 # package.yml - 自动生成的权限声明
 permissions:
@@ -452,7 +461,7 @@ services:
   web:
     image: myapp:latest
     environment:
-      - DATABASE_URL=postgresql://postgres:{{.INTERNAL.db_password}}@postgres:5432/app
+      - DATABASE_URL=postgresql://postgres:{{ stable_secret "db_password" }}@postgres:5432/app
     healthcheck:
       test:
         - CMD-SHELL
@@ -464,7 +473,7 @@ services:
   postgres:
     image: postgres:15
     environment:
-      - POSTGRES_PASSWORD={{.INTERNAL.db_password}}
+      - POSTGRES_PASSWORD={{ stable_secret "db_password" }}
     binds:
       - /lzcapp/var/db:/var/lib/postgresql/data
     healthcheck:
@@ -519,7 +528,7 @@ ext_config:
 services:
   redis:
     image: redis:7-alpine
-    command: redis-server --requirepass {{.INTERNAL.redis_password}}  # ✅ 字符串
+    command: redis-server --requirepass {{ stable_secret "redis_password" }}  # ✅ 字符串
     healthcheck:  # ✅ 无下划线
       test:
         - CMD
@@ -640,6 +649,6 @@ services:
 
 ---
 
-**最后更新**: 2026-04-22
-**基于**: 懒猫开发者文档 v1.5.0+
-**新增**: 权限自动分析（根据 binds 路径）
+**最后更新**: 2026-08-05
+**基于**: 懒猫开发者文档 v1.6.1+
+**新增**: 权限自动分析、应用数据分类、FUSE 与物理显示器约束

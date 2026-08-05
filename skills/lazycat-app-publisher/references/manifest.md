@@ -491,6 +491,7 @@ services:
 | `usb_accel` | `bool` | ❌ | 挂载 USB 设备到 `/dev/bus/usb` |
 | `gpu_accel` | `bool` | ❌ | 挂载 GPU 设备到 `/dev/dri` |
 | `kvm_accel` | `bool` | ❌ | 挂载 KVM 设备到 `/dev/kvm` 和 `/dev/vhost-net` |
+| `vt` | `bool` | ❌ | v1.6.1+ 物理显示器 VT；需 `vt.display`，所有 service 使用 `runc` |
 | `depends_on` | `[]string` | ❌ | 依赖的其他容器服务 |
 
 ### A.2 路由与网络字段
@@ -512,6 +513,10 @@ services:
 | `environment` | `[]string` | ❌ | app 容器的环境变量 |
 | `health_check` | `AppHealthCheckExt` | ❌ | app 容器的健康检测 |
 | `oidc_redirect_path` | `string` | ❌ | OIDC 回调路径 |
+
+### A.4 已废弃配置
+
+`application.handlers` 已废弃。请求处理改用 `application.injects` 的 `request` 阶段，响应和错误页处理改用 `response` 阶段。`services.*.handlers` 不是合法字段。
 
 ---
 
@@ -560,11 +565,11 @@ TCP/UDP 端口转发配置。
 | 字段名 | 类型 | 必需 | 描述 |
 |--------|------|------|------|
 | `protocol` | `string` | ✅ | 协议类型：tcp 或 udp |
-| `port` | `int` | ✅ | 目标端口号 |
+| `port` | `int` | ❌ | 目标端口号；为空时沿用实际入站端口 |
 | `service` | `string` | ❌ | 服务容器名称，默认为 app |
 | `description` | `string` | ❌ | 服务描述 |
 | `publish_port` | `string` | ❌ | 允许的入站端口或端口范围 |
-| `send_port_info` | `bool` | ❌ | 发送实际端口信息 |
+| `send_port_info` | `bool` | ❌ | 仅 TCP；业务数据前附加 2 字节 little-endian `uint16` 原始入站端口 |
 | `yes_i_want_80_443` | `bool` | ❌ | 允许 80/443 端口（绕过鉴权，慎用！） |
 
 **示例：**
@@ -643,7 +648,7 @@ services:
 
 | 字段名 | 类型 | 必需 | 描述 |
 |--------|------|------|------|
-| `enable_document_access` | `bool` | ❌ | 将 document 目录挂载到 /lzcapp/run/mnt/home |
+| `enable_document_access` | `bool` | ❌ | 启用废弃兼容路径 `/lzcapp/run/mnt/home`；v1.7.0+ 还需管理员明确授权 |
 | `enable_media_access` | `bool` | ❌ | 将 media 目录挂载到 /lzcapp/run/mnt/media |
 | `disable_grpc_web_on_root` | `bool` | ❌ | 不劫持应用的 grpc-web 流量 |
 | `default_prefix_domain` | `string` | ❌ | 调整启动器打开的默认域名前缀 |

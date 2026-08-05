@@ -18,5 +18,15 @@
     "id": 4,
     "prompt": "Smarticky 这种应用既要支持 LazyCat 内部应用调用 MCP，也要支持外部 MCP 客户端用 token 调用，鉴权应该怎么做，哪些事情不能做？",
     "expected": "应说明 LazyCat header 信任必须由环境开关控制，校验 X-HC-User-ID 和 X-HC-SOURCE；外部用 Authorization: Bearer 用户级 token；token 只保存 hash 且明文只返回一次；每个 tool 都要做用户隔离，不记录原始 token 或 ticket。"
+  },
+  {
+    "id": 5,
+    "prompt": "前端通知用户点击后打开 cloud.lazycat.app.todo 的 /tasks 页面，deeplinkUrl 应该怎么写？",
+    "expected": "应使用 lzc://client/app/open?appId=cloud.lazycat.app.todo&path=/tasks，不应继续使用旧的 lzc://app/<package> 形式。"
+  },
+  {
+    "id": 6,
+    "prompt": "Go 后端已经知道 uid 和目标 uniqueDeivceId，如何向该设备发送 LazyCat 通知？",
+    "expected": "应先用 APIGateway 的 ListEndDevices 找到在线且 deviceApiUrl 非空的设备；用默认 CA/应用证书建立 TLS gRPC，RequestAuthToken 后设置 lzc_dapi_auth_token，再调用 localdevice.NotificationService.Notify；需要 15s 左右超时并关闭 gateway/connection。"
   }
 ]

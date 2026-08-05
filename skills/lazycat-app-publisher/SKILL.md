@@ -1,57 +1,6 @@
 ---
 name: lazycat-app-publisher
-description: Use when converting Docker Compose or Docker Run apps to LazyCat LPK v2, publishing or updating LazyCat apps, copying Docker images to the LazyCat registry, selecting images in multi-service manifests, using lzc-publish, or configuring permissions, passwordless login, app interconnect, resources, run_as, and file picker integration.
-preferences:
-  - id: add_root_to_public_path
-    name: 添加 / 到 public_path
-    description: 自动在生成的 manifest 中添加 "/" 到 application.public_path
-    type: boolean
-    default: true
-  - id: manifest_multilingual
-    name: Manifest 多语言支持
-    description: 在 manifest 文件中生成中英文双语 locales
-    type: boolean
-    default: true
-  - id: simple_app_optimization
-    name: 简单应用优化
-    description: 简单应用跳过 lzc-deploy-params.yml 生成
-    type: boolean
-    default: true
-  - id: auto_healthcheck
-    name: 自动健康检查
-    description: 自动为服务添加健康检查配置
-    type: boolean
-    default: true
-  - id: auto_resource_limits
-    name: 自动资源限制
-    description: 自动为服务添加合理的资源限制
-    type: boolean
-    default: true
-  - id: minimal_docs
-    name: 最简文档
-    description: 只生成 README.md，跳过其他 markdown 文件
-    type: boolean
-    default: true
-  - id: background_task
-    name: 后台任务模式
-    description: 默认将 application.background_task 设为 true，适用于长时间运行的后台服务
-    type: boolean
-    default: false
-  - id: package_prefix
-    name: 包名前缀
-    description: 应用包名默认前缀（community.lazycat.app、cloud.lazycat.app 或自定义）
-    type: string
-    default: cloud.lazycat.app
-  - id: generate_compose_override
-    name: 生成 compose_override
-    description: 在 lzc-build.yml 中为不支持的字段生成 compose_override 部分
-    type: boolean
-    default: true
-  - id: passwordless_login
-    name: 免密登录配置
-    description: 为有密码体系的应用自动配置免密登录（使用 injects）
-    type: boolean
-    default: true
+description: Use when converting Docker Compose or Docker Run apps to LazyCat LPK v2, publishing or updating LazyCat apps, copying Docker images to the LazyCat registry, selecting images in multi-service manifests, using lzc-publish, or configuring permissions, passwordless login, app interconnect, resources, run_as, FUSE, physical-display VT, L4 ingress, and file picker integration.
 ---
 
 # LazyCat 应用发布助手
@@ -63,8 +12,9 @@ preferences:
 | Document | Content |
 |----------|---------|
 | [references/strict-constraints.md](references/strict-constraints.md) | **严格约束 - 各配置文件允许/禁止字段** ⭐ |
+| [references/architecture.md](references/architecture.md) | **LPK / LightOS / Docker 选择边界** ⭐ |
 | [references/passwordless-login.md](references/passwordless-login.md) | **免密登录配置 - 所有应用必备** ⭐ |
-| [references/go-template-conditional.md](references/go-template-conditional.md) | **Go Template 条件渲染 - {{if}}/{{else}}/{{end}}** ⭐ 新增 |
+| [references/go-template-conditional.md](references/go-template-conditional.md) | **Go Template 完整参考 - 上下文、条件、循环、函数与 YAML 安全** ⭐ |
 | [references/version-features.md](references/version-features.md) | OS版本与特性对照表 - min_os_version 设置 |
 | [references/advanced-features.md](references/advanced-features.md) | 高级功能 - 多入口、compose_override、资源限制、网络等 ⭐ |
 | [references/quick-reference.md](references/quick-reference.md) | 快速参考 - 常用转换规则和命令 |
@@ -77,6 +27,7 @@ preferences:
 | [references/app-interconnect.md](references/app-interconnect.md) | ⭐ 应用间访问 - `.lzcx` 地址、`X-HC-USER-TICKET`、委托权限 (v1.5.2+) |
 | [references/resource-export.md](references/resource-export.md) | ⭐ 资源导出 - Skill/MCP 导出与导入 (v1.5.2+) |
 | [references/file-picker-intercept.md](references/file-picker-intercept.md) | ⭐ 文件选择器拦截 - 应用商店强制要求 (v1.5.0+) |
+| [references/physical-display.md](references/physical-display.md) | ⭐ 物理显示器 VT - `vt.display`、`application.vt`、`/lzcinit/vt.active` (v1.6.1+) |
 | [references/cli-reference.md](references/cli-reference.md) | lzc-cli 命令参考 |
 | [references/spec.md](references/spec.md) | 官方规范参考 |
 | [references/docker-compose-examples.md](references/docker-compose-examples.md) | Docker Compose 转换示例 |
@@ -111,6 +62,8 @@ LPK v2（tar 格式，包含 `package.yml`）是 lzcos v1.5.0+ 才支持的特�
 | **`run_as` (UID/GID + owner 映射)** | **v1.6.0+** | **容器数字 UID/GID + `/lzcapp` 持久目录 owner 映射** ⭐ |
 | **`hidden_from_launcher`** | **v1.5.3** | **从启动器隐藏应用入口** |
 | **`user.notify` 权限** | **v1.6.0** | **向用户发送通知** |
+| **`fuse.mount` 权限** | **v1.6.1** | 注入 `/lzcinit/fusermount3`，`/lzcinit` 自动加入 `PATH` |
+| **物理显示器 VT** | **v1.6.1** | `vt.display` + `application.vt: true`，不支持 `sysbox-runc` |
 | **文件选择器拦截** | **v1.5.0+** | **应用商店强制：有上传/下载必须接入** ⭐ |
 
 **版本决策表：**
@@ -128,6 +81,8 @@ LPK v2（tar 格式，包含 `package.yml`）是 lzcos v1.5.0+ 才支持的特�
 | 使用 **`run_as` (UID/GID owner 映射)** | **1.6.0+** ⭐ |
 | 使用 **`hidden_from_launcher`** | **1.5.3** |
 | 使用 **`user.notify` 权限** | **1.6.0** |
+| 使用 **`fuse.mount` 权限** | **1.6.1** |
+| 使用 **物理显示器 VT** | **1.6.1** |
 | **文件选择器拦截（应用商店强制）** | **1.5.0** ⭐ |
 
 详见 [references/version-features.md](references/version-features.md) 和 [references/strict-constraints.md](references/strict-constraints.md)
@@ -140,6 +95,13 @@ LPK v2（tar 格式，包含 `package.yml`）是 lzcos v1.5.0+ 才支持的特�
 
 **输入**: Docker Compose 文件 或 Docker Run 命令
 **输出**: 服务分类结果（Internal/External），参数需求清单
+
+#### Step 1.0: 确认 LPK / LightOS 边界
+
+- 面向普通用户交付独立、可分发、可复现的一键安装应用：继续制作 LPK。
+- 需要长期维护完整 Linux 环境、通过包管理器安装软件、保存系统级配置/工具链、持续进入 shell，或主要目标是在环境中运行 Dockerd：优先使用 LightOS，不要强行转换为 LPK。
+- lzcos 的 SSH 系统是只读系统，直接通过 SSH 安装或修改的系统内容重启后会丢失；需要持久 Linux 环境时迁移到 LightOS。
+- LightOS 权限较高，只开放给可信用户或可信管理应用。
 
 #### Step 1.1: 解析源文件
 
@@ -203,12 +165,12 @@ docker --version || echo "Docker CLI 未安装，手动提供镜像名称即可"
 
 **⚠️ 检查点**: 自动分析权限需求（根据 binds 路径自动声明）
 
-**权限自动分析逻辑**：当 `lzc-manifest.yml` 中 `services.*.binds` 包含特定路径时，**必须**在 `package.yml.permissions` 中声明对应权限：
+**权限自动分析逻辑**：当应用使用受权限控制的 `/lzcapp` 路径时，**必须**在 `package.yml.permissions` 中声明对应权限：
 
-| binds 路径 | 必需权限 id | 说明 |
+| 使用路径 | 必需权限 id | 说明 |
 |-----------|------------|------|
-| `/lzcapp/documents` | `document.private` | 应用文稿目录，必须声明 |
-| `/lzcapp/documents/${uid}` | `document.private` | 用户隔离文稿目录 |
+| `/lzcapp/documents` | `document.private` | 应用文稿根目录；实际文件必须位于 `<uid>` 子目录 |
+| `/lzcapp/documents/${uid}` | `document.private` | 用户隔离的应用文稿目录 |
 | `/lzcapp/run/mnt/home` | `document.read` + `document.write` | 兼容旧路径（v1.7.0+ 需授权） |
 | `/lzcapp/media` | `media.read` 或 `media.write` | 媒体目录访问 |
 
@@ -222,7 +184,8 @@ docker --version || echo "Docker CLI 未安装，手动提供镜像名称即可"
 
 **⚠️ 检查点**: 如果检测到 `/lzcapp/documents` 挂载，必须暂停并告知用户：
 - 「检测到应用文稿目录 `/lzcapp/documents` 挂载，需要声明 `document.private` 权限」
-- 「该权限允许应用使用私有文稿目录，实际数据按用户隔离存放」
+- 「该权限只适合用户能理解、打开、迁移或管理的文件；数据库、索引、配置、缩略图、缓存和运行状态必须放到 `/lzcapp/var` 或 `/lzcapp/cache`」
+- 「实际文稿数据必须按用户写入 `/lzcapp/documents/<uid>`，应用卸载时默认不会删除」
 
 **⚠️ 检查点**: 确认 author 来源（按以下优先级）：
 
@@ -265,13 +228,13 @@ application:
   # 或 ingress（TCP/UDP 服务）
   # ingress:
   #   - port: 5432
-  #     proto: tcp
+  #     protocol: tcp
 
 services:
   db:
     image: postgres:15
     environment:
-      - POSTGRES_PASSWORD={{.INTERNAL.db_password}}  # Internal 服务自动配置
+      - POSTGRES_PASSWORD={{ stable_secret "db_password" }}  # 内部服务使用稳定密钥
 ```
 
 #### Step 2.3: 生成 lzc-build.yml（构建配置）
@@ -540,7 +503,7 @@ def classify_service(service_config):
 
 | 场景 | 推荐函数 | 示例 |
 |------|---------|------|
-| 内部服务密码 | `{{.INTERNAL.xxx}}` | `{{.INTERNAL.db_password}}` |
+| 内部服务密码 | `{{ stable_secret "seed" }}` | `{{ stable_secret "db_password" }}` |
 | 用户必须配置 | `{{.U.xxx}}` | `{{.U.jwt_secret_key}}` |
 | 系统域名 | `{{.S.AppDomain}}` | `{{.S.AppDomain}}` (不含协议) |
 | 稳定密钥 | `{{ stable_secret "seed"}}` | `{{ stable_secret "api_key"}}` |
@@ -549,26 +512,26 @@ def classify_service(service_config):
 
 #### ⚠️ 模板语法规范（重要）
 
-**字段名包含特殊字符时必须使用 `index` 语法，否则使用点语法：**
+**简单字段名优先使用点语法；包含特殊字符时必须使用 `index`：**
 
 ```yaml
-# ✅ 正确：简单字段名（无特殊字符）使用点语法
+# ✅ 简洁写法：简单字段名（无特殊字符）使用点语法
 {{ .U.login_user }}
 {{ .U.target }}
-{{ .INTERNAL.db_password }}
+{{ stable_secret "db_password" }}
 
 # ✅ 正确：字段名包含 "." 等特殊字符时使用 index 语法
 {{ index .U "listen.port" }}
 {{ index .U "api.endpoint" }}
 
-# ❌ 错误：简单字段名不应该使用 index 语法
-{{ index .U "login_user" }}  # ❌ 应改为 {{ .U.login_user }}
-{{ index .U "target" }}      # ❌ 应改为 {{ .U.target }}
+# ✅ 也合法：index 同样可以访问简单字段名
+{{ index .U "login_user" }}
+{{ index .U "target" }}
 ```
 
 **规则总结：**
-- 字段名不含 `.` → 使用 `{{ .U.xxx }}` 点语法
-- 字段名含 `.` → 使用 `{{ index .U "xxx" }}` index 语法
+- 字段名不含特殊字符 → 优先使用 `{{ .U.xxx }}` 点语法；`index` 仍合法
+- 字段名含 `.`、`-` 等特殊字符 → 必须使用 `{{ index .U "xxx" }}`
 
 详见 [references/intelligent-analysis.md](references/intelligent-analysis.md) 和 **[references/go-template-conditional.md](references/go-template-conditional.md)** ⭐
 
@@ -710,6 +673,16 @@ services:
 - **Docker**: `/some/path:/container/path`
 - **LazyCat**: `/lzcapp/var/...:/container/path` 或 `/lzcapp/cache/...:/container/path`
 
+先按数据归属分类，不能把所有持久化目录都映射到应用文稿：
+
+| 数据类型 | 稳定路径 | 规则 |
+|---------|---------|------|
+| 应用内部数据 | `/lzcapp/var` | 数据库、索引、配置、任务状态等；随应用生命周期管理 |
+| 可清理缓存 | `/lzcapp/cache` | 日志、缩略图、可重建文件 |
+| 用户可管理文稿 | `/lzcapp/documents/<uid>` | 需 `document.private`；按用户隔离，卸载应用时默认保留 |
+
+若目录中可能出现用户无法理解的文件，就不要放入应用文稿。单实例应用可能看到多个 UID 子目录，必须根据真实用户上下文选择目标 `<uid>`；多实例应用只会看到当前实例所属用户的 UID 子目录。
+
 **文档路径变更（v1.5.0+）**：
 
 | 版本 | 路径 | 说明 |
@@ -717,11 +690,21 @@ services:
 | v1.5.0+ | `/lzcapp/documents` | 新路径，推荐 |
 | < v1.5.0 | `/lzcapp/document` | 废弃，仅兼容 |
 
-需要文档访问权限时，需在 manifest 中声明：
+`ext_config.enable_document_access` 只控制废弃兼容路径 `/lzcapp/run/mnt/home`，不是启用私有应用文稿的方式。需要兼容旧用户文稿时才声明：
 ```yaml
 ext_config:
   enable_document_access: true
 ```
+
+从 lzcos v1.7.0 起，该兼容路径还需要管理员明确授权。新应用应使用 `document.private` + `/lzcapp/documents/<uid>`。
+
+### L4 ingress 端口语义
+
+- `publish_port` 是原始入站端口，可为单端口或范围；默认等于 `port`。
+- `service` 为空时目标为 `app`。
+- `port` 为空时，目标端口沿用实际入站端口；设置后，范围内所有入站端口都转发到这个固定目标端口。
+- `send_port_info` 仅支持 TCP。启用后，系统先写入 2 字节 little-endian `uint16` 原始入站端口，再写业务数据；现有协议若不能消费这个前缀则禁止启用。
+- L4 ingress 不提供 HTTP 层鉴权；应用必须自行鉴权。
 
 详见 [references/quick-reference.md](references/quick-reference.md)
 
@@ -764,8 +747,8 @@ application:
       do:
         - src: builtin://simple-inject-password
           params:
-            # 简单字段名使用点语法：{{ .U.xxx }}
-            # 仅当字段名包含特殊字符（如 "."）时才使用 index 语法
+            # 简单字段名优先使用点语法；index 也合法
+            # 字段名包含特殊字符（如 "."）时必须使用 index
             user: "{{ .U.login_user }}"
             password: "{{ .U.login_password }}"
 ```
@@ -889,8 +872,8 @@ application:
       do:
         - src: builtin://simple-inject-password
           params:
-            # 简单字段名使用点语法：{{ .U.xxx }}
-            # 仅当字段名包含特殊字符（如 "."）时才使用 index 语法
+            # 简单字段名优先使用点语法；index 也合法
+            # 字段名包含特殊字符（如 "."）时必须使用 index
             user: "{{ .U.login_user }}"
             password: "{{ .U.login_password }}"
 
@@ -898,7 +881,7 @@ services:
   postgres:
     image: postgres:15
     environment:
-      - POSTGRES_PASSWORD={{.INTERNAL.db_password}}
+      - POSTGRES_PASSWORD={{ stable_secret "db_password" }}
     healthcheck:  # ✅ v1.4.1: 使用 'healthcheck' (无下划线)
       test:
         - CMD-SHELL
@@ -1004,7 +987,7 @@ application:
 
 # ❌ 硬编码密钥
 environment:
-  - PASSWORD=secret123  # 使用 {{.U.password}} 或 {{.INTERNAL.xxx}}
+  - PASSWORD=secret123  # 使用 {{ .U.password }} 或 {{ stable_secret "password" }}
 
 # ❌ v1.5.0+ 使用旧文档路径
 binds:
@@ -1314,7 +1297,7 @@ injects:
 
 | binds 路径前缀 | 必需权限 id | 声明位置 |
 |---------------|------------|----------|
-| `/lzcapp/documents` | `document.private` | `permissions.required` |
+| `/lzcapp/documents` | `document.private` | `permissions.required`；实际数据写入 `<uid>` 子目录 |
 | `/lzcapp/documents/${uid}` | `document.private` | `permissions.required` |
 | `/lzcapp/run/mnt/home` | `document.read` + `document.write` | `permissions.required` |
 | `/lzcapp/media` | `media.read` 或 `media.write` | 按读写需求 |
@@ -1333,13 +1316,15 @@ injects:
 |---------|---------|
 | 缺少权限声明 → lzcinit 拒绝挂载该路径 → 应用启动后无法读写文件 | 在 `package.yml` 的 `permissions.required` 中补充对应权限 id |
 
+**数据分类检查**：若 `/data` 保存数据库、索引、配置、缩略图、缓存或运行状态，即使原 Compose 把它叫作 `documents`，也必须映射到 `/lzcapp/var` 或 `/lzcapp/cache`，不能为了持久化而滥用 `document.private`。
+
 **正确示例**：
 ```yaml
 # ✅ lzc-manifest.yml - 使用 /lzcapp/documents
 services:
   app:
     binds:
-      - /lzcapp/documents:/data  # ✅ 挂载应用文稿目录
+      - /lzcapp/documents:/data  # ✅ 应用必须在 /data/<uid> 下读写用户文稿
 
 # ✅ package.yml - 自动生成的权限声明
 permissions:
@@ -1439,8 +1424,11 @@ application:
 | **environment 空值 (v1.4.2)** | `environment:` 空数组会报错 | 不要留空，删除字段或填写值 |
 | **compose_override 使用** | 需联系官方备案 | **⚠️ 检查点**：使用前提示用户联系开发者群或客服 |
 | **文档路径 (v1.5.0)** | `/lzcapp/document` 废弃 | 使用新路径 `/lzcapp/documents` |
+| **应用文稿数据误用** | 数据库/索引/配置写入 `/lzcapp/documents` | 内部数据改用 `/lzcapp/var`；文稿只保存用户可理解文件 |
 | **run_as 冲突 (v1.6.0)** | `application.run_as` 与 `user` 同时使用 | **⚠️ 强制警告**：run_as 不得与 user 在同一级别同时使用 |
 | **run_as + setup_script 冲突 (v1.6.0)** | `services.<name>.run_as` 与 `setup_script` 同时使用 | **⚠️ 强制警告**：service 级别 run_as 不得与 setup_script 同时使用 |
+| **FUSE 版本过低** | 使用 `fuse.mount` 但 lzcos < v1.6.1 | 设置 `min_os_version: 1.6.1`；使用注入的 `fusermount3` |
+| **VT runtime 冲突** | `application.vt: true` 与 `sysbox-runc` 共存 | 所有 service 使用默认 `runc`，并声明 `vt.display` |
 
 ### 恢复流程
 
@@ -1548,7 +1536,7 @@ GET https://search.lazycat.cloud/api/v1/app?keyword={app_name}&size=48
 | 添加 / 到 public_path | true | 自动添加 "/" 到 public_path |
 | Manifest 多语言 | true | 生成中英文 locales |
 | 简单应用优化 | true | 简单应用跳过 params 生成 |
-| 自动健康检查 | true | 自动添加 healthcheck |
+| 自动健康检查 | false | 默认保留源 Compose 配置；容器内命令经确认后才添加 |
 | 自动资源限制 | true | 自动添加资源限制 |
 | 最简文档 | true | 只生成 README.md |
 | 后台任务模式 | false | 设置 background_task: true |
@@ -1588,12 +1576,12 @@ services:
 services:
   postgres:
     environment:
-      - POSTGRES_PASSWORD={{.INTERNAL.db_password}}  # 自动
+      - POSTGRES_PASSWORD={{ stable_secret "db_password" }}  # 自动生成稳定密钥
     healthcheck: {...}
 
   app:
     environment:
-      - DATABASE_URL=postgresql://postgres:{{.INTERNAL.db_password}}@postgres:5432/app
+      - DATABASE_URL=postgresql://postgres:{{ stable_secret "db_password" }}@postgres:5432/app
       - SECRET_KEY={{.U.secret_key}}  # 用户配置
 ```
 

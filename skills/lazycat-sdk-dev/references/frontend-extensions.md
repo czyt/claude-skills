@@ -696,7 +696,7 @@ export async function notifyCurrentDevice() {
   await device.notification.Notify({
     title: "任务完成",
     body: "导入任务已经处理完成",
-    deeplinkUrl: "lzc://app/cloud.lazycat.app.demo",
+    deeplinkUrl: "lzc://client/app/open?appId=cloud.lazycat.app.demo&path=/",
   })
 }
 ```
@@ -730,7 +730,23 @@ export async function notifyDevice(uniqueDeviceId) {
 }
 ```
 
-### 6.6 投递方式说明
+### 6.6 Go 后端向指定设备推送
+
+后端已知当前用户 `uid` 和目标设备 `uniqueDeivceId` 时，使用以下链路：
+
+1. `gohelper.NewAPIGateway` + `Devices.ListEndDevices` 查找目标设备。
+2. 只接受 `isOnline == true` 且 `deviceApiUrl` 非空的设备。
+3. 使用 SDK 默认 CA、应用 key 和证书创建 TLS credentials。
+4. 先调用 `gohelper.RequestAuthToken`，再把 token 放入 gRPC metadata `lzc_dapi_auth_token`。
+5. 调用 `localdevice.NotificationService.Notify`，全程设置超时并关闭 gateway/connection。
+
+完整可运行示例见 [go-sdk.md#go-backend-notification](go-sdk.md#go-backend-notification)。deeplink 使用客户端路由格式：
+
+```text
+lzc://client/app/open?appId=<package-id>&path=<path>
+```
+
+### 6.7 投递方式说明
 
 具体投递方式由系统决定，可能是：
 - 客户端系统通知
@@ -738,7 +754,7 @@ export async function notifyDevice(uniqueDeviceId) {
 - 信箱
 - 其他用户可感知的通知通道
 
-### 6.7 常见错误
+### 6.8 常见错误
 
 | 错误 | 原因 | 修复 |
 |------|------|------|
@@ -747,7 +763,7 @@ export async function notifyDevice(uniqueDeviceId) {
 | 通知无响应 | 高频推送被系统限流 | 控制发送频率，不要循环调用 |
 | 浏览器中调用失败 | 非 WebShell 环境无 notification 能力 | 先判断 `isClientWebShell()` 再调用 |
 
-### 6.8 错误处理示例
+### 6.9 错误处理示例
 
 ```js
 import { lzcAPIGateway } from "@lazycatcloud/sdk"
@@ -887,5 +903,5 @@ export async function bindAudioSession(audio, title) {
 
 ---
 
-**最后更新**: 2026-06-18
+**最后更新**: 2026-08-05
 **基于**: 懒猫开发者文档 advanced-frontend-app-dev.md

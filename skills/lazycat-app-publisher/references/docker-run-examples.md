@@ -358,7 +358,10 @@ icon: ./icon.png
 
 ## 7. Jenkins CI/CD
 
-### Docker Run Command
+### 边界判断
+
+以下命令把 Docker socket 挂入 Jenkins，使任务能够管理宿主容器：
+
 ```bash
 docker run -d \
   --name jenkins \
@@ -368,38 +371,7 @@ docker run -d \
   jenkins/jenkins:lts
 ```
 
-### LazyCat Files
-
-**package.yml:**
-```yaml
-package: cloud.lazycat.app.jenkins
-version: 1.0.0
-name: Jenkins
-description: "Jenkins CI/CD from docker run"
-```
-
-**lzc-manifest.yml:**
-```yaml
-application:
-  subdomain: jenkins
-  routes:
-    - /=http://jenkins.cloud.lazycat.app.jenkins.lzcapp:8080
-
-services:
-  jenkins:
-    image: jenkins/jenkins:lts
-    binds:
-      - /lzcapp/var/jenkins:/var/jenkins_home
-    cpu: 2000
-    mem_limit: 2048M
-```
-
-**lzc-build.yml:**
-```yaml
-manifest: ./lzc-manifest.yml
-pkgout: ./
-icon: ./icon.png
-```
+不要为这个版本生成 LPK，也不要把 socket 搬进 `compose_override`。需要执行 Docker 构建或管理 Docker daemon 的 Jenkins 应部署在 LightOS 中。只有移除 Docker 管理需求、确认任务完全在 Jenkins 容器自身边界内运行后，才可重新评估为普通 LPK。
 
 ---
 
@@ -507,7 +479,8 @@ icon: ./icon.png
 
 ## 10. Portainer
 
-### Docker Run Command
+Portainer 的核心职责就是管理 Docker daemon。以下 Docker Run 命令中的 socket 是 LightOS 判定信号：
+
 ```bash
 docker run -d \
   --name portainer \
@@ -517,38 +490,7 @@ docker run -d \
   portainer/portainer-ce:latest
 ```
 
-### LazyCat Files
-
-**package.yml:**
-```yaml
-package: cloud.lazycat.app.portainer
-version: 1.0.0
-name: Portainer
-description: "Portainer from docker run"
-```
-
-**lzc-manifest.yml:**
-```yaml
-application:
-  subdomain: portainer
-  routes:
-    - /=http://portainer.cloud.lazycat.app.portainer.lzcapp:9000
-
-services:
-  portainer:
-    image: portainer/portainer-ce:latest
-    binds:
-      - /lzcapp/var/portainer:/data
-    cpu: 1000
-    mem_limit: 512M
-```
-
-**lzc-build.yml:**
-```yaml
-manifest: ./lzc-manifest.yml
-pkgout: ./
-icon: ./icon.png
-```
+不要生成缺失 socket 的“简化 LPK”，因为它会安装成功但失去核心功能。请在 LightOS 内安装 Docker 与 Portainer，并按普通 Linux 环境维护其配置和数据。
 
 ---
 

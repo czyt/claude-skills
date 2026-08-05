@@ -93,8 +93,8 @@ application:
       do:
         - src: builtin://simple-inject-password
           params:
-            # 简单字段名使用点语法：{{ .U.xxx }}
-            # 仅当字段名包含特殊字符（如 "."）时才使用 index 语法
+            # 简单字段名优先使用点语法；index 也合法
+            # 字段名包含特殊字符（如 "."）时必须使用 index
             user: "{{ .U.login_user }}"
             password: "{{ .U.login_password }}"
 
@@ -243,6 +243,13 @@ await ctx.persist.del(key) -> Promise<void>
 await ctx.persist.list(prefix?) -> Promise<Array<{key, value}>>
 ```
 
+约束：
+
+- 访问 `ctx.persist` 时 `ctx.safe_uid` 必须非空。
+- `key`/`prefix` 会去除首尾空白；空 key 不能用于 `get`/`set`/`del`。
+- `set` 的 value 必须可 JSON 序列化。
+- `list` 返回全量结果并按 key 字典序升序。
+
 ### `ctx.flow` - 请求级临时共享
 
 同一请求内 request -> response 共享状态，请求结束后清空。
@@ -253,6 +260,8 @@ ctx.flow.set(key, value) -> void
 ctx.flow.del(key) -> void
 ctx.flow.list(prefix?) -> Array<{key, value}>
 ```
+
+`key`/`prefix` 同样会去除首尾空白；空 key 不能用于 `get`/`set`/`del`，value 必须可 JSON 序列化，`list` 按 key 字典序升序。
 
 **典型用法：** request 阶段捕获候选值写入 `flow`，response 阶段成功后写入 `persist`。
 
@@ -267,12 +276,16 @@ ctx.headers.add(name, value) -> void     // 添加（不覆盖）
 ctx.headers.del(name) -> void            // 删除
 ```
 
+- `set(name, null)` 或 `set(name, undefined)` 等价于删除该 Header。
+- `set(name, array)` 会先删除原值，再按数组元素添加多个同名 Header。
+- `add(name, value)` 追加字符串化的单值；`null`/`undefined` 不追加。
+
 ### `ctx.body` - Body 读写
 
 ```javascript
 ctx.body.getText(opts?) -> string
 ctx.body.getJSON(opts?) -> any
-ctx.body.getForm(opts?) -> Record<string, string | string[]>
+ctx.body.getForm(opts?) -> Record<string, string[]>
 ctx.body.set(body, opts?) -> void
 ```
 
@@ -285,6 +298,8 @@ ctx.body.set(body, opts?) -> void
 
 **⚠️ 注意：** `ctx.body.getJSON()` 直接解析失败时需要捕获异常。
 
+`ctx.body.set` 对字符串按原文写入，对 `null`/`undefined` 写入空 body，其他类型按 JSON 序列化；同时更新 `Content-Length` 并清理 `Content-Encoding` 与 `ETag`。
+
 ### `ctx.response` - 短路返回
 
 ```javascript
@@ -293,11 +308,11 @@ ctx.response.send(status, body?, opts?) -> void
 
 **opts 参数：**
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| `headers` | `object` | 附加响应头 |
-| `content_type` | `string` | 设置 Content-Type |
-| `location` | `string` | 重定向地址（301/302 等必须提供） |
+| 字段 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `headers` | `object` | 空 | 附加响应头；数组生成多个同名 Header，值为 `null` 时跳过 |
+| `content_type` | `string` | `text/html; charset=utf-8` | 设置 Content-Type |
+| `location` | `string` | 空 | 重定向地址（301/302/303/307/308 必须提供） |
 
 **重要：** 调用后必须 `return;` 停止后续执行。
 
@@ -309,25 +324,29 @@ ctx.proxy.to(url, opts?) -> void
 
 **opts 参数：**
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| `use_target_host` | `bool` | 把 Host 改为目标 host |
-| `timeout_ms` | `int` | 代理超时 |
-| `path` | `string` | 重写 path |
-| `query` | `string` | 重写 query（不带 `?`） |
-| `via` | `object` | 网络路径对象 |
-| `on_fail` | `string` | 失败策略：`keep_original` 或 `error` |
+| 字段 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `use_target_host` | `bool` | `false` | 把 Host 改为目标 host |
+| `timeout_ms` | `int` | `5000` | 代理超时（毫秒） |
+| `path` | `string` | 空 | 重写 path |
+| `query` | `string` | 空 | 重写 query（不带 `?`） |
+| `via` | `object` | 空 | 网络路径对象 |
+| `on_fail` | `string` | `keep_original` | 失败策略：`keep_original` 或 `error` |
+
+`url` 必须包含 scheme 和 host。未显式设置 `path`/`query` 时，先采用 URL 中的对应部分；URL 也未提供时才沿用原请求。
 
 ### `ctx.net` - 网络探测
 
 ```javascript
 ctx.net.joinHost(host, port) -> string
+ctx.net.via.local() -> object         // 当前容器网络
 ctx.net.via.host() -> object          // 访问 lzcos host network
 ctx.net.via.client(id) -> object      // 访问指定客户端节点
 ctx.net.reachable(protocol, host, port, via?) -> bool
 ```
 
 - `protocol` 支持 `tcp`、`tcp4`、`tcp6`
+- `host` 支持容器可达 hostname 或 IP 字面量
 - `reachable(...)` 为实时探测，默认超时约 `1200ms`
 
 ### `ctx.dev` - 开发机状态
@@ -346,6 +365,12 @@ ctx.fs.readJSON(path, opts?) -> any
 ctx.fs.stat(path) -> object
 ctx.fs.list(path) -> string[]
 ```
+
+- `path` 必须是绝对路径。
+- `readText`/`readJSON` 的 `opts.max_bytes` 默认 `1048576`；超限抛错。
+- `readJSON` 会解析 JSON 后返回。
+- `list` 只返回下一层条目名称，并按名称升序。
+- `stat` 返回 `is_file`、`is_dir`、`size`、`mod_time_unix` 和数值 `mode`。
 
 ### `ctx.dump` - 调试输出
 
@@ -571,4 +596,4 @@ injects:
 - [strict-constraints.md](strict-constraints.md) - 配置文件约束
 - 官方文档：https://developer.lazycat.cloud
 
-**最后更新**: 2026-04-14
+**最后更新**: 2026-08-05

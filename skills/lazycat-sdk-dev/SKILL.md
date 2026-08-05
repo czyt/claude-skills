@@ -76,6 +76,7 @@ const api = new lzcAPIGateway(window.location.origin, false)
 | 应用管理 | `gw.PkgManager` | [go-sdk.md#PkgManager](references/go-sdk.md) |
 | 前端客户端能力 | `AppCommon` | [frontend-extensions.md](references/frontend-extensions.md) |
 | 系统通知推送 | `notification.Notify` | [frontend-extensions.md#通知](references/frontend-extensions.md) |
+| Go 后端定向通知 | `ListEndDevices` + Device API `NotificationService.Notify` | [go-sdk.md#go-backend-notification](references/go-sdk.md#go-backend-notification) |
 | 发现微服 Skill/MCP | `import_resources` + 文件扫描 | [mcp-resources.md](references/mcp-resources.md) |
 | 对外提供 MCP | `/mcp` + `resource_exports` | [mcp-resources.md](references/mcp-resources.md) |
 | 动态聚合 MCP tools | MCP client `ListTools` + namespaced proxy | [mcp-resources.md](references/mcp-resources.md) |
@@ -392,25 +393,29 @@ import base from "@lazycatcloud/sdk/dist/extentions/base"
 
 const api = new lzcAPIGateway(window.location.origin, false)
 
-// ⚠️ 检查点：非 WebShell 环境跳过
-if (base.isIosWebShell() || base.isAndroidWebShell()) {
-  try {
-    const device = await api.currentDevice
-    // ⚠️ 检查点：确认 notification 能力可用
-    if (device?.notification?.Notify) {
-      await device.notification.Notify({
-        title: "任务完成",
-        body: "导入任务已经处理完成",
-        deeplinkUrl: "lzc://app/cloud.lazycat.app.demo",
-      })
+export async function notifyCurrentDevice() {
+  // ⚠️ 检查点：非 WebShell 环境跳过
+  if (base.isIosWebShell() || base.isAndroidWebShell()) {
+    try {
+      const device = await api.currentDevice
+      // ⚠️ 检查点：确认 notification 能力可用
+      if (device?.notification?.Notify) {
+        await device.notification.Notify({
+          title: "任务完成",
+          body: "导入任务已经处理完成",
+          deeplinkUrl: "lzc://client/app/open?appId=cloud.lazycat.app.demo&path=/",
+        })
+      }
+    } catch (err) {
+      console.error("[notification] send failed:", err)
     }
-  } catch (err) {
-    console.error("[notification] send failed:", err)
   }
 }
 ```
 
 **⚠️ 前置条件**：`package.yml` 需声明 `user.notify` 权限（lzcos >= v1.6.0）
+
+Go 后端发送到指定设备时，不能直接复用浏览器的 `currentDevice`：先用 `gw.Devices.ListEndDevices` 按 `uid` 查找在线设备并读取 `deviceApiUrl`，再用应用证书建立 TLS gRPC 连接，通过 `RequestAuthToken` 获取 token，携带 `lzc_dapi_auth_token` 调用 `localdevice.NotificationService.Notify`。整个流程使用超时，并拒绝离线、缺少 API URL 或找不到的设备。完整代码见 [references/go-sdk.md#go-backend-notification](references/go-sdk.md#go-backend-notification)。
 
 **❌ 不要做**：
 - 不要在非 WebShell 环境直接调用（`device.notification` 为 undefined）

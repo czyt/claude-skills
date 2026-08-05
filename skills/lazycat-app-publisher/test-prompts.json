@@ -2,7 +2,7 @@
   {
     "id": 1,
     "prompt": "将这个 docker-compose.yml 转换为 LazyCat LPK v2 格式，应用有登录页面需要配置免密登录：\nservices:\n  web:\n    image: nginx:latest\n    ports:\n      - \"80:80\"\n    environment:\n      - ADMIN_USER=admin\n      - ADMIN_PASSWORD=secret123\n",
-    "expected": "生成的 injects 配置中，user 和 password 参数应使用 {{ .U.admin_user }} 和 {{ .U.admin_password }} 点语法，而非 index 语法"
+    "expected": "生成的 injects 配置可优先使用 {{ .U.admin_user }} 和 {{ .U.admin_password }} 点语法；也应承认 {{ index .U \"admin_user\" }} 合法，不能把普通 key 的 index 写法判错。"
   },
   {
     "id": 2,
@@ -12,17 +12,17 @@
   {
     "id": 3,
     "prompt": "检查这个免密登录配置是否正确：\napplication:\n  injects:\n    - id: login-autofill\n      when:\n        - /login\n      do:\n        - src: builtin://simple-inject-password\n          params:\n            user: \"{{ index .U \\\"login_user\\\" }}\"\n            password: \"{{ index .U \\\"login_password\\\" }}\"",
-    "expected": "应指出 login_user 和 login_password 是简单字段名，不应使用 index 语法，建议改为 {{ .U.login_user }} 和 {{ .U.login_password }}"
+    "expected": "应判断该配置合法：index 可以访问普通 key。可以建议 {{ .U.login_user }} 和 {{ .U.login_password }} 作为更简洁写法，但不能声称必须修改。"
   },
   {
     "id": 4,
     "prompt": "将这个 docker-compose.yml 转换为 LazyCat LPK v2 格式：\nservices:\n  filebrowser:\n    image: filebrowser/filebrowser:latest\n    ports:\n      - \"8080:80\"\n    volumes:\n      - /home/user/documents:/data\n    environment:\n      - FB_NOAUTH=false\n",
-    "expected": "应该将 volumes 转换为 binds，路径映射为 /lzcapp/documents:/data，并在 package.yml.permissions 中自动添加 document.private 权限声明"
+    "expected": "应先确认 /data 保存的是用户可理解和管理的文件；确认后可映射 /lzcapp/documents:/data，并在 package.yml.permissions 中添加 document.private，同时要求应用按真实 uid 写入 /data/<uid>。若是数据库或内部状态则改用 /lzcapp/var。"
   },
   {
     "id": 5,
     "prompt": "这个应用的 package.yml 权限声明是否正确？\nbinds:\n  - /lzcapp/documents:/data\n  - /lzcapp/media/RemoteFS:/media\npermissions:\n  required:\n    - net.internet\n",
-    "expected": "应指出缺少 document.private 权限（对应 /lzcapp/documents）和 media.read 权限（对应 /lzcapp/media）"
+    "expected": "应指出缺少 document.private 权限（对应 /lzcapp/documents）和 media.read 权限（对应 /lzcapp/media），并提醒应用文稿实际数据必须在 <uid> 子目录且不能保存数据库、索引或内部配置。"
   },
   {
     "id": 6,
@@ -58,5 +58,45 @@
     "id": 12,
     "prompt": "构建完是否发布更新到懒猫微服？我 fish 里常用 lzc-publish <lpk-file> <changelog-message>。",
     "expected": "应把发布作为显式选择（例如 --publish/--no-publish），发布时优先调用 fish 函数 lzc-publish <lpk-file> <changelog-message> [lang]；没有该函数时再回退到 lzc-cli appstore publish -c ... --clang zh。"
+  },
+  {
+    "id": 13,
+    "prompt": "这个 Compose 把 PostgreSQL 的 /var/lib/postgresql/data 挂到宿主 documents 目录。转换成 LazyCat 时能否使用 /lzcapp/documents？",
+    "expected": "不能。数据库是应用内部数据，必须使用 /lzcapp/var；/lzcapp/documents/<uid> 只用于用户能直接理解、打开、迁移或管理的文件，且卸载时默认保留。"
+  },
+  {
+    "id": 14,
+    "prompt": "我要把外部 TCP 16000-18000 都转到 app:6666，并让服务知道原始入站端口。请给 ingress 配置和协议说明。",
+    "expected": "应使用 protocol: tcp、publish_port: 16000-18000、port: 6666、send_port_info: true；说明服务必须先读取 2 字节 little-endian uint16 原始端口，现有协议不能消费前缀时不得启用。"
+  },
+  {
+    "id": 15,
+    "prompt": "这个 LPK 要把 Xorg 界面显示到微服物理显示器，service 当前使用 sysbox-runc。应该怎么配置？",
+    "expected": "应设置 min_os_version: 1.6.1、声明 vt.display、配置 application.vt: true，并把所有 service 改为默认 runc；说明 status 的 stdout/退出码 0、1、2 语义，以及 activate 在界面实际激活后才成功返回。"
+  },
+  {
+    "id": 16,
+    "prompt": "应用用 rclone 挂载 FUSE 文件系统，package.yml 要什么权限和最低系统版本？",
+    "expected": "应声明 fuse.mount，设置 min_os_version: 1.6.1，并说明系统注入 /lzcinit/fusermount3 且把 /lzcinit 加入 PATH。"
+  },
+  {
+    "id": 17,
+    "prompt": "部署参数 enabled 为 bool、listen.port 为 string。请用 Go Template 条件切换环境，并读取端口；内部数据库密码不要让用户填写。",
+    "expected": "应使用 {{ if .U.enabled }}...{{ else }}...{{ end }}、{{ index .U \"listen.port\" }} 和 {{ stable_secret \"db_password\" }}；不得使用不存在的 .INTERNAL、.E 或 .PkgEnvs 上下文。"
+  },
+  {
+    "id": 18,
+    "prompt": "我想在 application.handlers.error_page_templates 里配置 502 错误页，并在 services.app.handlers 里写 on_start，可以吗？",
+    "expected": "不可以。application.handlers 已废弃，应使用 application.injects 的 response/request 阶段；services.*.handlers 不是合法字段，启动逻辑应放 entrypoint、command、setup_script 或应用进程。"
+  },
+  {
+    "id": 19,
+    "prompt": "我不是要上架一个固定应用，而是想长期 apt 安装工具、保存系统配置、进 shell 调试并在里面运行 Docker。请帮我转成 LPK。",
+    "expected": "应先指出该需求更适合 LightOS：LPK 用于可分发、可复现的独立应用，LightOS 用于长期维护完整 Linux 环境和 Dockerd；lzcos SSH 修改重启后会丢失，且 LightOS 只应开放给可信用户/应用。"
+  },
+  {
+    "id": 20,
+    "prompt": "部署参数 allowed_hosts 是逗号分隔字符串，proxy_url 可选，enabled 是 bool。请用 LazyCat Manifest 的 Go Template 生成 YAML 列表、处理可选代理并按 enabled 分支；还要说明怎么避免 YAML 被用户输入破坏。",
+    "expected": "应使用 Sprig splitList + range 生成列表、with/else 处理 proxy_url、if/else 处理 enabled，并用 quote 保护字符串；进入 with/range 后需要根上下文时使用 $。不得使用 env/expandenv、.E、.PkgEnvs 或 .INTERNAL，并应要求每个渲染分支再做 YAML 解析和真实部署验证。"
   }
 ]

@@ -80,8 +80,8 @@ application:
       do:
         - src: builtin://simple-inject-password
           params:
-            # 简单字段名使用点语法：{{ .U.xxx }}
-            # 仅当字段名包含特殊字符（如 "."）时才使用 index 语法
+            # 简单字段名优先使用点语法；index 也合法
+            # 字段名包含特殊字符（如 "."）时必须使用 index
             user: "{{ .U.login_user }}"
             password: "{{ .U.login_password }}"
 ```

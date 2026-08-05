@@ -292,7 +292,10 @@ icon: ./icon.png
 
 ## 5. Portainer (Management UI)
 
-### Docker Compose
+### 边界判断
+
+Portainer 依赖 Docker socket 管理 daemon；以下 Compose 属于 LightOS 场景：
+
 ```yaml
 version: '3.8'
 services:
@@ -309,38 +312,7 @@ volumes:
   portainer_data:
 ```
 
-### LazyCat Files
-
-**package.yml:**
-```yaml
-package: cloud.lazycat.app.portainer
-version: 1.0.0
-name: Portainer
-description: "Portainer Container Management"
-```
-
-**lzc-manifest.yml:**
-```yaml
-application:
-  subdomain: portainer
-  routes:
-    - /=http://portainer.cloud.lazycat.app.portainer.lzcapp:9000
-
-services:
-  portainer:
-    image: portainer/portainer-ce:latest
-    binds:
-      - /lzcapp/var/data:/data
-    cpu: 1000
-    mem_limit: 512M
-```
-
-**lzc-build.yml:**
-```yaml
-manifest: ./lzc-manifest.yml
-pkgout: ./
-icon: ./icon.png
-```
+停止 LPK 转换，不要把 socket 改写为 `compose_override`，也不要删除 socket 后输出一个功能残缺的 Portainer。应在 LightOS 中运行该 Compose。
 
 ---
 

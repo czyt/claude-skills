@@ -132,36 +132,34 @@ services:
 
 ### compose_override（覆盖不支持参数）
 
-**使用场景：** Docker socket、设备直通、特权模式等
+**使用场景：** LPK 规范尚未覆盖、且已向官方备案的临时运行权限。不要用它暴露宿主 Docker socket；需要 Docker 环境时使用 LightOS。
 
 ```yaml
 # lzc-build.yml
 compose_override:
   services:
     app:
+      cap_drop:
+        - SETCAP
+        - MKNOD
       volumes:
-        - /var/run/docker.sock:/var/run/docker.sock
-      devices:
-        - /dev/ttyUSB0:/dev/ttyUSB0
-      privileged: true
+        - /data/playground:/lzcapp/run/playground:ro
 ```
 
 **完整项目示例：**
 ```yaml
-# lzc-manifest.yml
-services:
-  lucky:
-    image: lucky:latest
-    environment:
-      - DOCKER_HOST=unix:///var/run/docker.sock
-
 # lzc-build.yml
 compose_override:
   services:
-    lucky:
+    app:
+      cap_drop:
+        - SETCAP
+        - MKNOD
       volumes:
-        - /data/playground/docker.sock:/var/run/docker.sock
+        - /data/playground:/lzcapp/run/playground:ro
 ```
+
+`compose_override` 是不承诺兼容性的过渡机制，尤其不要依赖宿主内部路径。使用前需在开发者群说明或联系官方备案，否则商店审核可能拒绝。
 
 ### 资源限制
 

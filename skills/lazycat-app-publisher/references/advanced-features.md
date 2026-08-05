@@ -161,10 +161,12 @@ services:
 当 LazyCat 原生不支持某些 Docker Compose 参数时，通过 `compose_override` 在构建时注入这些参数。
 
 ### 使用场景
-- 挂载 Docker socket（`/var/run/docker.sock`）
+- 临时补充尚未进入 LPK 权限规范的可控能力
 - 添加特殊设备映射
 - 设置不支持的网络模式
 - 任何需要在构建时覆盖的服务配置
+
+不要用 `compose_override` 暴露宿主 Docker socket。需要 Docker、Docker Compose 或完整可持久 Linux 环境时使用 LightOS。
 
 ### 语法格式
 
@@ -181,44 +183,25 @@ compose_override:
       network_mode: host
 ```
 
-### 实际项目示例
+### 官方示例
 
-**来自 lucky-lzcapp:**
 ```yaml
 # lzc-build.yml
 compose_override:
   services:
-    lucky:
+    some_container:
+      cap_drop:
+        - SETCAP
+        - MKNOD
       volumes:
-        - /data/playground/docker.sock:/var/run/docker.sock
+        - /data/playground:/lzcapp/run/playground:ro
 ```
 
-**完整项目结构:**
-```yaml
-# lzc-manifest.yml
-name: Lucky
-package: cloud.lazycat.app.lucky
-version: 1.0.0
-min_os_version: 1.3.8
-
-services:
-  lucky:
-    image: lucky:latest
-    environment:
-      - DOCKER_HOST=unix:///var/run/docker.sock
-    # 注意：这里没有 volumes，因为 volumes 会在 compose_override 中添加
-
-# lzc-build.yml
-compose_override:
-  services:
-    lucky:
-      volumes:
-        - /data/playground/docker.sock:/var/run/docker.sock
-```
+`compose_override` 是不承诺兼容性的过渡机制，特别是宿主系统路径挂载。使用前必须在开发者群说明或联系官方备案，否则商店审核可能拒绝。
 
 ### 官方文档说明
 
-**来源:** `/home/czyt/Desktop/lzc-developer-doc-master/docs/advanced-compose-override.md`
+**来源:** https://developer.lazycat.cloud/advanced-compose-override
 
 **关键点:**
 1. `compose_override` 在 `lzc-build.yml` 中定义
@@ -228,15 +211,9 @@ compose_override:
 
 ### 常见使用场景
 
-#### 1. Docker Socket 挂载
-```yaml
-# lzc-build.yml
-compose_override:
-  services:
-    portainer:
-      volumes:
-        - /var/run/docker.sock:/var/run/docker.sock
-```
+#### 1. Docker 管理类应用
+
+检测到 Docker socket、Dockerd 或 Docker Compose 管理需求时停止生成 LPK，并建议使用 LightOS。不要通过 `compose_override` 挂载宿主 Docker socket；该旧方案依赖宿主内部实现，不属于当前 LPK 分发边界。
 
 #### 2. 设备直通
 ```yaml
@@ -340,6 +317,14 @@ application:
       service: wireguard
       description: "WireGuard VPN"
 ```
+
+端口语义：
+
+- `publish_port` 是原始入站端口，支持单端口或范围；默认值为 `port`。
+- `service` 为空时使用 `app`。
+- `port` 为空时，目标端口沿用实际入站端口；设置 `port` 后，整个 `publish_port` 范围都转发到该固定目标端口。
+- `send_port_info` 仅支持 TCP。启用后会在业务数据前写入 2 字节 little-endian `uint16` 原始入站端口；目标协议必须显式消费该前缀。
+- L4 转发不提供 HTTP 鉴权。暴露服务必须自行实现鉴权，直接接管 80/443 还会绕过系统鉴权、唤醒和证书处理。
 
 ### 2.4 混合配置
 
@@ -997,28 +982,11 @@ services:
         - vm.swappiness=0
 ```
 
-### 8.2 handlers（事件处理）
+### 8.2 handlers（已废弃）
 
-```yaml
-services:
-  app:
-    image: myapp:latest
-    handlers:
-      - event: on_start
-        action: script
-        script: |
-          echo "服务启动中..."
+`application.handlers` 已废弃，不要生成新的 `acl_handler` 或 `error_page_templates`。请求 ACL、Header 修改和动态代理改用 `application.injects` 的 `on: request`；错误页、重定向和响应修改改用 `on: response`。
 
-      - event: on_stop
-        action: script
-        script: |
-          echo "服务停止中..."
-          curl -X POST http://localhost:8080/shutdown
-
-      - event: on_health_failure
-        action: restart
-        max_retries: 3
-```
+`services.*.handlers` 不是官方 Manifest 字段。容器启动/停止行为应由镜像 entrypoint、`command`、`setup_script` 或应用进程自身处理。
 
 ### 8.3 platform（平台支持）
 
@@ -1035,8 +1003,12 @@ services:
 
 ```yaml
 # 单实例（默认）
-services:
-## 8.10 多实例应用
+application:
+  subdomain: myapp
+  multi_instance: false
+```
+
+#### 多实例应用
 
 **说明：** 多实例是指每个用户启动独立的应用容器实例，实现数据隔离。
 
@@ -1281,7 +1253,7 @@ manifest: ./lzc-manifest.yml
 pkgout: ./
 icon: ./icon.png
 
-# GPU 支持和 Docker socket 挂载
+# GPU 支持（需要先向官方确认 compose_override 能力和审核要求）
 compose_override:
   services:
     api:
@@ -1292,8 +1264,6 @@ compose_override:
               - driver: nvidia
                 count: 1
                 capabilities: [gpu]
-      volumes:
-        - /var/run/docker.sock:/var/run/docker.sock  # 用于容器管理
 ```
 
 ---
