@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>aur-github-publish Darwin result</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#111;color:#eee;font-family:Inter,"Noto Sans SC",sans-serif}.card{width:900px;min-height:1120px;padding:54px;background:#171717;border:1px solid #333}.eyebrow{color:#ff8a4c;font-weight:800;letter-spacing:.12em}.date{float:right;color:#888}.title{font-size:50px;line-height:1.05;margin:42px 0 18px}.sub{font-size:21px;color:#aaa}.score{margin:42px 0;display:flex;gap:30px;align-items:end}.before{font-size:44px;color:#777;text-decoration:line-through}.arrow{font-size:38px;color:#ff8a4c}.after{font-size:94px;font-weight:900;color:#fff}.unit{font-size:18px;color:#999}.verdict{display:inline-block;padding:11px 18px;background:#ff6b1a;color:#111;font-weight:900;border-radius:4px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin:40px 0}.panel{padding:25px;border:1px solid #333;background:#202020}.panel h3{margin:0 0 12px;color:#ff8a4c}.panel p{margin:0;color:#bbb;line-height:1.6}.bars{margin-top:36px}.bar{margin:18px 0}.label{display:flex;justify-content:space-between;margin-bottom:8px}.track{height:10px;background:#333}.fill{height:100%;background:#ff6b1a}.summary{margin-top:42px;border-top:1px solid #333;padding-top:28px}.summary li{margin:14px 0;color:#ccc;line-height:1.5}.footer{margin-top:48px;color:#777;font-family:monospace}
+</style>
+</head>
+<body><div class="card">
+<div class="eyebrow">DARWIN.SKILL <span class="date">2026-08-12</span></div>
+<div class="title">aur-github-publish<br>进化报告</div>
+<div class="sub">从模板堆叠，进化为以版本契约驱动的可验证发布流程</div>
+<div class="score"><span class="before">53.1</span><span class="arrow">→</span><span class="after">3–0</span><span class="unit">paired judges · CLEAR BETTER</span></div>
+<span class="verdict">KEEP</span>
+<div class="grid">
+  <div class="panel"><h3>最大突破 · 实测表现</h3><p>补齐 mutable latest 多架构 deb：包内版本、ETag 状态、多架构原子校验、同版本 pkgrel。</p></div>
+  <div class="panel"><h3>第二突破 · 整体架构</h3><p>SKILL.md 从 1267 行压缩到 282 行；完整模板进入按需 reference。</p></div>
+  <div class="panel"><h3>失败恢复</h3><p>AUR 先发布，GitHub 后保存状态；失败保留旧 ETag，下一次自动重试。</p></div>
+  <div class="panel"><h3>边界隔离</h3><p>GitHub PKGBUILD 保持 SKIP；AUR action 计算真实 checksum；状态文件明确排除。</p></div>
+</div>
+<div class="bars">
+  <div class="bar"><div class="label"><span>工作流清晰度</span><span>7 → 9</span></div><div class="track"><div class="fill" style="width:90%"></div></div></div>
+  <div class="bar"><div class="label"><span>失败模式编码</span><span>5 → 9</span></div><div class="track"><div class="fill" style="width:90%"></div></div></div>
+  <div class="bar"><div class="label"><span>可执行具体性</span><span>6 → 9</span></div><div class="track"><div class="fill" style="width:90%"></div></div></div>
+  <div class="bar"><div class="label"><span>实测表现</span><span>2 → 9</span></div><div class="track"><div class="fill" style="width:90%"></div></div></div>
+  <div class="bar"><div class="label"><span>反例与黑名单</span><span>5 → 9</span></div><div class="track"><div class="fill" style="width:90%"></div></div></div>
+</div>
+<div class="summary"><h2>关键改进</h2><ul>
+  <li>从 deb control 元数据读取 Version / Architecture，不从 URL 或 ETag 猜版本。</li>
+  <li>ETag 只保存在 GitHub-only upstream.env；精确 assets 白名单防止进入 AUR。</li>
+  <li>新增 concurrency、防降级、架构漂移、AUR RPC 索引延迟与状态提交失败恢复。</li>
+  <li>四类测试 prompt 覆盖常规 Release、手动版本、GoReleaser 与 mutable latest。</li>
+</ul></div>
+<div class="footer">Train your Skills like you train your models · github.com/alchaincyf/darwin-skill</div>
+</div></body></html>
