@@ -1,0 +1,14 @@
+timestamp	commit	skill	old_score	new_score	status	dimension	note	eval_mode
+2026-05-09T12:30	baseline	media-search	-	53.8	baseline	-	初始评估（干跑）	dry_run
+2026-05-09T12:35	a8d045a	media-search	53.8	74.0	keep	多维度	添加frontmatter+工作流+检查点+异常处理	dry_run
+2026-05-09T12:40	9e292b7	media-search	74.0	79.5	keep	指令具体性	添加输出模板和决策逻辑	dry_run
+2026-05-09T12:45	c569b31	media-search	79.5	80.0	keep	边界条件	添加意图不明确时的澄清引导	dry_run
+2026-06-18T16:20	baseline	justfile	-	59.5	baseline	-	初始评估（full_test）	full_test
+2026-06-18T16:25	901eca1	justfile	59.5	71.5	keep	失败模式+反例+检查点	添加三段式fallback表+反例清单+检查点标记	full_test
+2026-06-18T16:30	9c09e01	justfile	71.5	73.9	keep	工作流清晰度	添加标准工作流Step1-6	full_test
+2026-06-18T16:35	58070b1	justfile	73.9	77.3	keep	可执行具体性	添加语法速查表格规格（函数/属性/变量）	full_test
+2026-06-18T16:40	dd38759	justfile	77.3	78.5	keep	整体架构	合并重复并行执行内容	full_test
+2026-06-18T16:45	0c81f19	justfile	78.5	79.7	keep	工作流清晰度	添加ASCII流程图和输入输出规格	full_test
+2026-08-12T11:40	baseline	aur-github-publish	-	53.1	baseline	-	mutable latest deb dry-run 暴露版本契约、状态顺序与多架构失败分支缺失	dry_run
+2026-08-12T11:52	778f935	aur-github-publish	53.1	3-0 better	keep	整体架构+实测表现	3 judges clear better；主文件1267→282行，新增mutable latest状态机、失败恢复与黑名单	paired
+2026-08-12T11:56	ac626cb	aur-github-publish	-	keep	资源一致性	修正legacy GitHub Release模板的fail-fast解析；GoReleaser forward-test通过，mutable forward-test误读仓库标记无效	full_test
