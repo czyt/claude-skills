@@ -11,5 +11,5 @@ timestamp	commit	skill	old_score	new_score	status	dimension	note	eval_mode
 2026-06-18T16:45	0c81f19	justfile	78.5	79.7	keep	工作流清晰度	添加ASCII流程图和输入输出规格	full_test
 2026-08-12T11:40	baseline	aur-github-publish	-	53.1	baseline	-	mutable latest deb dry-run 暴露版本契约、状态顺序与多架构失败分支缺失	dry_run
 2026-08-12T11:52	778f935	aur-github-publish	53.1	3-0 better	keep	整体架构+实测表现	3 judges clear better；主文件1267→282行，新增mutable latest状态机、失败恢复与黑名单	paired
-2026-08-12T11:56	ac626cb	aur-github-publish	-	keep	资源一致性	修正legacy GitHub Release模板的fail-fast解析；GoReleaser forward-test通过，mutable forward-test误读仓库标记无效	full_test
+2026-08-12T11:56	ac626cb	aur-github-publish	-	通过	keep	资源一致性	修正legacy GitHub Release模板的fail-fast解析；GoReleaser forward-test通过，mutable forward-test误读仓库标记无效	full_test
 2026-08-12T12:02	ac626cb	aur-github-publish	-	3-0 better	keep	失败模式+资源一致性	3 judges slight better；连续第二轮一致偏好，按见好就收规则停止	paired
