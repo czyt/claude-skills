@@ -252,6 +252,8 @@ AUR Git 已出现 commit 而 RPC 暂时为 `resultcount: 0` 时，先按索引�
 
 ### 基本模板
 
+本节是常规 GitHub Release 的最小骨架。套用前必须同时满足：网络请求 fail-fast、解析结果非空、资产可下载、自动更新不降级、同包 workflow 设置 `concurrency`。新建 workflow 时 pin 已核验的 action commit SHA；示例中的 tag 只表示最低功能版本。
+
 ```yaml
 name: Update {pkgname} Version
 
@@ -286,7 +288,9 @@ jobs:
           if [ -n "${{ inputs.version }}" ]; then
             echo "version=${{ inputs.version }}" >> $GITHUB_OUTPUT
           else
-            VERSION=$(curl -s https://api.github.com/repos/{owner}/{repo}/releases/latest | jq -r '.tag_name' | sed 's/^v//')
+            VERSION=$(curl -fsSL --retry 3 --retry-all-errors \
+              https://api.github.com/repos/{owner}/{repo}/releases/latest |
+              jq -er '.tag_name | sub("^v"; "")')
             echo "version=$VERSION" >> $GITHUB_OUTPUT
           fi
 
