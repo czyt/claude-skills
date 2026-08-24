@@ -174,6 +174,8 @@ docker --version || echo "Docker CLI 未安装，手动提供镜像名称即可"
 
 生成前向用户展示可选项：`community.lazycat.app.<app-id>`（默认）或 `cloud.lazycat.app.<app-id>`。用户要求直接生成且没有指定时，使用 `community.lazycat.app`，不阻塞在重复确认上。包名一旦发布会影响应用身份、升级匹配、`.lzcapp`/`.lzcx` 地址和应用间访问，不能在后续版本中随意切换。
 
+**包名输出要求**：生成 `package.yml` 前先报告完整 `package`、选择的前缀和前缀来源（`default`、`user-selected`、`explicit-package` 或 `existing-app`）。`existing-app` 必须原样复用已有包名；不得只报告短应用名或省略前缀来源。
+
 **⚠️ 检查点**: 自动分析权限需求（根据 binds 路径自动声明）
 
 **权限自动分析逻辑**：当应用使用受权限控制的 `/lzcapp` 路径时，**必须**在 `package.yml.permissions` 中声明对应权限：

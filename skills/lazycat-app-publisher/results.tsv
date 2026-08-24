@@ -11,3 +11,4 @@ timestamp	commit	skill	old_score	new_score	status	dimension	note	eval_mode
 2026-06-22T08:55	working-tree	lazycat-app-publisher	92.3	94.1	keep	失败模式+反例黑名单	新增通用版本更新脚本；多镜像必须显式选择service；发布走lzc-publish且默认不发布；dry-run覆盖单镜像、多镜像、发布和解析失败	dry_run
 2026-06-22T10:30	auto-optimize/20260622-1030	lazycat-app-publisher	87.95	89.1	keep	实测表现	区分记忆值和用户指定的 service，修复边界 bug	full_test
 2026-06-22T10:45	auto-optimize/20260622-1030	lazycat-app-publisher	89.1	86.8	revert	实测表现	补充多镜像处理流程指导（过度文档化）	full_test
+2026-08-24T00:30	working-tree	lazycat-app-publisher	-	3-0 better	keep	包名输出契约	要求输出完整 package、前缀和来源，paired judge 3-0	paired
