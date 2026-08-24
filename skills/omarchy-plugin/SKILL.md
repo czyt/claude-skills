@@ -43,6 +43,8 @@ omarchy plugin clone omarchy.clock --edit
 
 Use the exact ID printed by the command. Work under `~/.config/omarchy/plugins/<plugin-id>/`; never edit packaged Omarchy source. Saving files reloads plugin code; force discovery with `omarchy-shell shell rescanPlugins`.
 
+During clone development, preserve the generated `omarchy.clonedFrom` and any built-in routing identifiers that the clone command leaves in `moduleName`/IPC targets; Omarchy routes existing built-in callers to the active clone. Do not mass-replace those values while the clone is still replacing the built-in. Only before publishing, remove clone-only metadata and update every `moduleName`, `ipcTarget`, and related caller to the permanent third-party ID.
+
 ### 2. Define `manifest.json`
 
 The manifest is at the repository/plugin root. Use a namespaced third-party ID, never an `omarchy.*` ID:
@@ -170,4 +172,3 @@ Submit a marketplace listing through the [plugin marketplace issue form](https:/
 ## Output Contract
 
 When creating a plugin, return: the selected kind and why, the complete file tree, each changed file, exact validation commands, observed test steps, install/enable commands, and known version assumptions. If the request is actually for an independent Quickshell config, state that boundary and use a separate standalone workflow.
-
