@@ -765,7 +765,7 @@ def determine_author(app_name: str, homepage: str = None, user_input: str = None
 **GitHub 项目（自动提取）：**
 ```yaml
 # package.yml
-package: cloud.lazycat.app.vaultwarden
+package: community.lazycat.app.vaultwarden
 name: Vaultwarden
 homepage: https://github.com/dani-garcia/vaultwarden
 author: dani-garcia  # ✅ 从 GitHub URL 自动提取
@@ -774,7 +774,7 @@ author: dani-garcia  # ✅ 从 GitHub URL 自动提取
 **非 GitHub 项目（默认生成）：**
 ```yaml
 # package.yml
-package: cloud.lazycat.app.nextcloud
+package: community.lazycat.app.nextcloud
 name: Nextcloud
 homepage: https://nextcloud.com
 author: Nextcloud Team  # ✅ 应用名 + Team
@@ -783,7 +783,7 @@ author: Nextcloud Team  # ✅ 应用名 + Team
 **用户指定：**
 ```yaml
 # package.yml
-package: cloud.lazycat.app.myapp
+package: community.lazycat.app.myapp
 name: MyApp
 author: Custom Author  # ✅ 用户明确指定
 ```

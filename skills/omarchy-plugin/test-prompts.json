@@ -1,0 +1,27 @@
+[
+  {
+    "id": 1,
+    "prompt": "为 Omarchy Quattro 写一个显示时间的 bar-widget 插件，要求给出 manifest.json、BarWidget.qml、开发目录、校验、启用和发布步骤。",
+    "expected": "使用 manifest.json 和 barWidget entry point，代码加载进已有 omarchy-shell；给出 namespaced ID、~/.config/omarchy/plugins 路径、omarchy plugin validate、qmllint、生命周期测试和 GitHub 发布清单。"
+  },
+  {
+    "id": 2,
+    "prompt": "我想给 Omarchy 的 bar widget 增加一个可点击弹窗，应该如何组织 BarWidget.qml 和 Panel.qml？",
+    "expected": "说明嵌套 Panel 通过 Loader/Qt.resolvedUrl 加载，复用同一 moduleName，转发 opened/open/close/toggle/closeForPopoutSwitch，并使用 KeyboardPanel、PanelKeyCatcher 和 hostWidget/bar 注入。"
+  },
+  {
+    "id": 3,
+    "prompt": "插件 validate 通过但不在 Omarchy bar 中显示，manifest 的 entryPoints 也看起来没问题。请排查。",
+    "expected": "先执行 omarchy-shell shell rescanPlugins 和 omarchy plugin list --json，再确认 enabled、kinds、defaultSection/布局；最后检查 qs log 和 QML 导入错误，不建议启动第二个 Quickshell。"
+  },
+  {
+    "id": 4,
+    "prompt": "用户给了一个独立 Quickshell PanelWindow 时钟配置，要求把它发布成 Omarchy plugin。应该直接加一个 systemd 服务吗？",
+    "expected": "指出独立 Quickshell 配置与 Omarchy plugin contract 不同；应改成 manifest.json + 对应 Omarchy kind/entry point 并加载进长驻 omarchy-shell，不能添加第二个 Quickshell 进程。"
+  },
+  {
+    "id": 5,
+    "prompt": "请把官方 omarchy.clock 复制成我的插件并发布到 GitHub。",
+    "expected": "先用 omarchy plugin clone，在用户目录中开发；发布前改为永久 namespaced ID、移除 omarchy.clonedFrom，不复制官方作者/描述/ID，并完成 validate、README、LICENSE 和安全审查。"
+  }
+]

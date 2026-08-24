@@ -161,7 +161,18 @@ docker --version || echo "Docker CLI 未安装，手动提供镜像名称即可"
 
 #### Step 2.1: 生成 package.yml（静态元数据）
 
-**⚠️ 检查点**: 确认包名前缀（默认 `cloud.lazycat.app`）
+**🔴 CHECKPOINT**: 确认包名前缀（新应用默认 `community.lazycat.app`）
+
+包名前缀按以下规则决策：
+
+| 场景 | 使用的前缀 | 处理方式 |
+|------|------------|----------|
+| 新应用，用户未指定前缀 | `community.lazycat.app` | 直接使用默认值，不因历史示例使用 `cloud.lazycat.app` 而改用 cloud |
+| 用户明确选择 cloud 前缀 | `cloud.lazycat.app` | 按用户选择生成，并在结果中标明这是非默认选项 |
+| 用户明确指定完整包名 | 用户给出的包名 | 原样保留并校验合法性 |
+| 已有应用或升级发布 | 已有包名 | 必须保持原包名，不能为了统一前缀而更换应用身份 |
+
+生成前向用户展示可选项：`community.lazycat.app.<app-id>`（默认）或 `cloud.lazycat.app.<app-id>`。用户要求直接生成且没有指定时，使用 `community.lazycat.app`，不阻塞在重复确认上。包名一旦发布会影响应用身份、升级匹配、`.lzcapp`/`.lzcx` 地址和应用间访问，不能在后续版本中随意切换。
 
 **⚠️ 检查点**: 自动分析权限需求（根据 binds 路径自动声明）
 
@@ -206,7 +217,7 @@ docker --version || echo "Docker CLI 未安装，手动提供镜像名称即可"
 详见 [references/intelligent-analysis.md](references/intelligent-analysis.md) 的 Author Auto-Fill Logic 章节
 
 ```yaml
-package: cloud.lazycat.app.myapp  # 用户可修改前缀
+package: community.lazycat.app.myapp  # 如用户明确选择 cloud，可改为 cloud.lazycat.app.myapp
 version: 1.0.0
 name: MyApp
 description: "应用描述"
@@ -829,7 +840,7 @@ application:
 
 ```yaml
 # package.yml - 静态元数据（含自动生成的权限声明）
-package: cloud.lazycat.app.myapp
+package: community.lazycat.app.myapp
 version: 1.0.0
 name: MyApp
 description: "My application"
@@ -944,7 +955,7 @@ locales:
 ```yaml
 # ❌ 将静态包元数据放在 lzc-manifest.yml（LPK v2 不允许）
 # 这些字段应该移到 package.yml
-package: cloud.lazycat.app.myapp
+package: community.lazycat.app.myapp
 version: 1.0.0
 name: MyApp
 
@@ -1200,7 +1211,7 @@ services:
 LPK v2 格式（tar + package.yml）是 v1.5.0+ 才支持的特性：
 ```yaml
 # package.yml
-package: cloud.lazycat.app.myapp
+package: community.lazycat.app.myapp
 version: 1.0.0
 min_os_version: 1.5.0  # ✅ 必须设置
 ```
@@ -1540,7 +1551,7 @@ GET https://search.lazycat.cloud/api/v1/app?keyword={app_name}&size=48
 | 自动资源限制 | true | 自动添加资源限制 |
 | 最简文档 | true | 只生成 README.md |
 | 后台任务模式 | false | 设置 background_task: true |
-| 包名前缀 | cloud.lazycat.app | 包名前缀 |
+| 包名前缀 | community.lazycat.app | 新应用默认值；用户可选择 cloud.lazycat.app |
 | 生成 compose_override | true | 生成 compose_override |
 | 免密登录 | true | **为密码体系应用自动配置免密登录** |
 

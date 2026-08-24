@@ -98,5 +98,20 @@
     "id": 20,
     "prompt": "部署参数 allowed_hosts 是逗号分隔字符串，proxy_url 可选，enabled 是 bool。请用 LazyCat Manifest 的 Go Template 生成 YAML 列表、处理可选代理并按 enabled 分支；还要说明怎么避免 YAML 被用户输入破坏。",
     "expected": "应使用 Sprig splitList + range 生成列表、with/else 处理 proxy_url、if/else 处理 enabled，并用 quote 保护字符串；进入 with/range 后需要根上下文时使用 $。不得使用 env/expandenv、.E、.PkgEnvs 或 .INTERNAL，并应要求每个渲染分支再做 YAML 解析和真实部署验证。"
+  },
+  {
+    "id": 21,
+    "prompt": "把一个新的 Docker Compose 应用 paperless 转成 LazyCat LPK v2。用户没有指定包名前缀，但要求直接给出可复制的 package.yml。应该使用哪个 package ID？",
+    "expected": "默认生成 community.lazycat.app.paperless，同时向用户展示 community.lazycat.app（默认）和 cloud.lazycat.app（可选）两种前缀；不能因为历史示例常用 cloud 就改变默认值。"
+  },
+  {
+    "id": 22,
+    "prompt": "把新的应用 paperless 转成 LPK，用户明确要求包名前缀使用 cloud.lazycat.app。请给出 package.yml 的 package 字段。",
+    "expected": "使用 cloud.lazycat.app.paperless，并说明这是用户明确选择的非默认前缀。"
+  },
+  {
+    "id": 23,
+    "prompt": "已有应用的 package.yml 是 package: cloud.lazycat.app.paperless，现在只想升级版本并统一包名前缀。能否改成 community.lazycat.app.paperless？",
+    "expected": "不能改包名前缀；升级必须继续使用 cloud.lazycat.app.paperless，以保持应用身份、升级匹配和基于包名的地址不变。"
   }
 ]
