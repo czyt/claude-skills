@@ -62,6 +62,7 @@ export function safeCall(fn, fallback) {
 | WebView 跟随键盘 resize | Android | `lzc_window.EnableWebviewResize` |
 | 客户端主题模式 | Android | `lzc_theme.getThemeMode` / `setThemeMode` |
 | 系统通知推送 | iOS / Android / 桌面 | `currentDevice.notification.Notify` |
+| 应用窗口 viewport 调整 | PC（桌面客户端） | `AppCommon.SetViewportSize` |
 
 ---
 
@@ -652,9 +653,42 @@ setAndroidThemeMode(ThemeMode.FOLLOW_SYSTEM, applyMode ?? 0)
 
 ---
 
-## 6. 系统通知（全平台适配）
+## 6. 仅 PC 桌面客户端
 
-### 6.1 概述
+### 6.1 调整应用 viewport 尺寸
+
+**推荐入口：** `AppCommon.SetViewportSize(size)`
+
+**适用场景：**
+- 桌面客户端内需要固定 / 调整应用页面可用区域的场景（如工具窗口、画布类应用）
+
+```js
+import { AppCommon } from "@lazycatcloud/sdk/dist/extentions"
+
+const result = await AppCommon.SetViewportSize({
+  width: 1280,
+  height: 720,
+})
+
+if (!result) {
+  // 当前平台或桌面客户端不支持，或本次调整失败（原因会输出到控制台）
+}
+```
+
+**返回值说明：**
+- `true`：viewport/content 可用区域调整成功
+- `false`：旧版桌面客户端不支持、客户端拒绝调整或 IPC 调用异常（原因输出到控制台）
+- `undefined`：非 PC 平台调用
+
+**说明：**
+- `width` / `height` 是应用页面希望获得的绝对 CSS 像素尺寸，不是宿主窗口外框尺寸，应用无需了解标题栏等宿主布局
+- 仅 PC WebShell 支持；移动端客户端请忽略该接口
+
+---
+
+## 7. 系统通知（全平台适配）
+
+### 7.1 概述
 
 LazyCat 提供系统级通知能力，应用可以向用户发送通知。支持 Android、iOS、macOS、Windows、Linux。
 
@@ -669,14 +703,14 @@ permissions:
 
 声明该权限后，应用容器内会注入 `/lzcinit/notify-send` 二进制。
 
-### 6.2 推荐入口
+### 7.2 推荐入口
 
 | 场景 | 入口 |
 |------|------|
 | 向当前设备推送 | `currentDevice.notification.Notify(request)` |
 | 向指定设备推送 | `getDeviceProxy(uniqueDeviceId).notification.Notify(request)` |
 
-### 6.3 Request 字段
+### 7.3 Request 字段
 
 | 字段 | 类型 | 必填 | 说明 |
 |------|------|------|------|
@@ -684,7 +718,7 @@ permissions:
 | `body` | `string` | ✅ | 通知正文 |
 | `deeplinkUrl` | `string` | ❌ | 用户点击通知后打开的 deeplink URL |
 
-### 6.4 示例：向当前设备推送通知
+### 7.4 示例：向当前设备推送通知
 
 ```js
 import { lzcAPIGateway } from "@lazycatcloud/sdk"
@@ -701,7 +735,7 @@ export async function notifyCurrentDevice() {
 }
 ```
 
-### 6.5 示例：列出设备并向指定设备推送
+### 7.5 示例：列出设备并向指定设备推送
 
 ```js
 import { lzcAPIGateway } from "@lazycatcloud/sdk"
@@ -730,7 +764,7 @@ export async function notifyDevice(uniqueDeviceId) {
 }
 ```
 
-### 6.6 Go 后端向指定设备推送
+### 7.6 Go 后端向指定设备推送
 
 后端已知当前用户 `uid` 和目标设备 `uniqueDeivceId` 时，使用以下链路：
 
@@ -746,7 +780,7 @@ export async function notifyDevice(uniqueDeviceId) {
 lzc://client/app/open?appId=<package-id>&path=<path>
 ```
 
-### 6.7 投递方式说明
+### 7.7 投递方式说明
 
 具体投递方式由系统决定，可能是：
 - 客户端系统通知
@@ -754,7 +788,7 @@ lzc://client/app/open?appId=<package-id>&path=<path>
 - 信箱
 - 其他用户可感知的通知通道
 
-### 6.8 常见错误
+### 7.8 常见错误
 
 | 错误 | 原因 | 修复 |
 |------|------|------|
@@ -763,7 +797,7 @@ lzc://client/app/open?appId=<package-id>&path=<path>
 | 通知无响应 | 高频推送被系统限流 | 控制发送频率，不要循环调用 |
 | 浏览器中调用失败 | 非 WebShell 环境无 notification 能力 | 先判断 `isClientWebShell()` 再调用 |
 
-### 6.9 错误处理示例
+### 7.9 错误处理示例
 
 ```js
 import { lzcAPIGateway } from "@lazycatcloud/sdk"
@@ -797,7 +831,7 @@ export async function safeNotify(title, body) {
 
 ---
 
-## 7. 推荐接入顺序
+## 8. 推荐接入顺序
 
 1. 先加平台判断 (`isIosWebShell`, `isAndroidWebShell`)
 2. 再加 `lzcapp-disable-dark` meta
@@ -806,13 +840,14 @@ export async function safeNotify(title, body) {
 5. 如果页面需要沉浸展示，再接全屏接口
 6. 如果页面是播放器，再接 Android `MediaSession`
 7. 如果页面是 Android 宿主内页面，再按需接状态栏颜色、控制栏显隐、主题模式
-8. 如果需要向用户推送通知，接 `notification.Notify`（需 `user.notify` 权限）
+8. 如果页面运行在 PC 桌面客户端且需要控制内容区尺寸，再接 `AppCommon.SetViewportSize`
+9. 如果需要向用户推送通知，接 `notification.Notify`（需 `user.notify` 权限）
 
 ---
 
-## 8. 常见组合示例
+## 9. 常见组合示例
 
-### 8.1 沉浸式详情页
+### 9.1 沉浸式详情页
 
 **适用平台：** iOS / Android
 
@@ -832,7 +867,7 @@ import { AppCommon } from "@lazycatcloud/sdk/dist/extentions"
 await AppCommon.SetFullScreen()
 ```
 
-### 8.2 iOS 文件选择 / 图片预览页
+### 9.2 iOS 文件选择 / 图片预览页
 
 **建议组合：**
 - iOS 关闭按钮显隐
@@ -860,7 +895,7 @@ function onPreviewClose() {
 }
 ```
 
-### 8.3 Android 音频播放页
+### 9.3 Android 音频播放页
 
 **建议组合：**
 - `MediaSession.setMetadata`
@@ -893,7 +928,7 @@ export async function bindAudioSession(audio, title) {
 
 ---
 
-## 9. 兼容性建议
+## 10. 兼容性建议
 
 - 所有宿主能力都做存在性判断，不要假设每个环境都已注入
 - meta 类能力推荐在页面初始 HTML 中直接声明
@@ -903,5 +938,5 @@ export async function bindAudioSession(audio, title) {
 
 ---
 
-**最后更新**: 2026-08-05
-**基于**: 懒猫开发者文档 advanced-frontend-app-dev.md
+**最后更新**: 2026-09-05
+**基于**: 懒猫开发者文档 advanced-frontend-app-dev.md + [lzc-sdk](https://gitee.com/linakesi/lzc-sdk) lang/js v0.1.552

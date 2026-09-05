@@ -176,6 +176,60 @@ if (isMediaSessionAvailable()) {
 
 ---
 
+## Newer AppCommon Capabilities (SDK >= 0.1.55x)
+
+Recent versions of `@lazycatcloud/sdk` (currently 0.1.55x) added many client capabilities. Highlights:
+
+### Adjust App Viewport Size (PC desktop client only)
+
+```ts
+const result = await AppCommon.SetViewportSize({ width: 1280, height: 720 })
+
+if (!result) {
+  // Old desktop client without support, refused, or IPC error (reason logged to console)
+}
+```
+
+- `true`: viewport/content area resized successfully.
+- `false`: unsupported desktop client version, rejected, or IPC failure (reason in console).
+- `undefined`: called on a non-PC platform.
+- `width`/`height` are absolute CSS pixels of the app content area; no need to know host title bar layout.
+
+### Other Recently Added APIs
+
+```ts
+import { AppCommon } from "@lazycatcloud/sdk/dist/extentions"
+
+// Native desktop video player (returns a session with events)
+const session = await AppCommon.OpenNativeVideoPlayer({
+  playlist: { index: 0, items: [{ id: "1", file: "https://example.com/v.mkv", name: "Episode 1", cover: "https://example.com/cover.jpg", duration: 1320 }] },
+  options: { singleton: true },
+})
+const unsubscribe = session.subscribe((event) => console.log(event.name, event.payload))
+// await session.close()
+
+// QR code scanning (mobile clients)
+const text = await AppCommon.ScanQrCode()
+
+// Haptic feedback (VibrateType: EFFECT_TICK / EFFECT_CLICK / EFFECT_HEAVY_CLICK / EFFECT_DOUBLE_CLICK)
+await AppCommon.Vibrate("EFFECT_CLICK")
+
+// Runtime capability probing
+const capabilities = await AppCommon.GetCapabilitys()
+
+// Client permission requests (album / contacts / BLE / microphone / camera)
+const status = await AppCommon.GetClientAuthorizationStatus("camera")
+if (!status?.authorized) await AppCommon.RequestClientAuthorization("camera")
+
+// Biometric lock for the light app
+const info = await AppCommon.GetBiometricInfo()
+const auth = await AppCommon.AuthenticateBiometric("Unlock to continue")
+```
+
+> Always guard these calls: check the environment first (`base.isIosWebShell()` / `base.isAndroidWebShell()` / capability probing via `GetCapabilitys`), and provide browser fallbacks.
+
+---
+
 ## Frontend Integration
 
 For web applications running inside LazyCat:

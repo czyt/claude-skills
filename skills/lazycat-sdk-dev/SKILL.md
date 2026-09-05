@@ -73,6 +73,7 @@ const api = new lzcAPIGateway(window.location.origin, false)
 | 用户信息查询 | `gw.Users` | [go-sdk.md#Users](references/go-sdk.md) |
 | 设备列表/状态 | `gw.Devices` | [go-sdk.md#Devices](references/go-sdk.md) |
 | 设备控制(LED/重启) | `gw.Box` | [go-sdk.md#Box](references/go-sdk.md) |
+| 客户端设备绑定管理 | `gw.HClients` | [go-sdk.md#HClient](references/go-sdk.md) |
 | 应用管理 | `gw.PkgManager` | [go-sdk.md#PkgManager](references/go-sdk.md) |
 | 前端客户端能力 | `AppCommon` | [frontend-extensions.md](references/frontend-extensions.md) |
 | 系统通知推送 | `notification.Notify` | [frontend-extensions.md#通知](references/frontend-extensions.md) |
@@ -238,9 +239,14 @@ MCP endpoint 推荐使用 Streamable HTTP：`POST /mcp`。如果应用需要同�
 | 服务 | 用途 | 主要方法 |
 |------|------|---------|
 | `gw.Users` | 用户管理 | `QueryUserInfo` |
-| `gw.Devices` | 设备管理 | `ListEndDevices` |
+| `gw.Devices` | 设备管理 | `ListEndDevices`, `RemoveEndDevice`, `SetDeviceRemarkName` |
 | `gw.Box` | 设备控制 | `QueryInfo`, `ChangePowerLed`, `Shutdown` |
+| `gw.HClients` | 客户端设备绑定管理 | `ListHClients`, `ListHClientDevices`, `SetHClientDeviceBinding` |
 | `gw.PkgManager` | 应用管理 | `QueryApplication`, `Resume`, `Pause` |
+| `gw.Message` | 站内消息 | 消息收发 |
+| `gw.Version` | 系统版本 | 版本查询 |
+
+其他可用服务：`gw.Permisions`（权限管理）、`gw.FileTransfer`（文件传输）、`gw.PeripheralDevice`（外设）、`gw.ISCSIService`（iSCSI 存储）、`gw.AccessControler`（访问控制）、`gw.Btrfs`（Btrfs）、`gw.DirMonitor`（目录监控）、`gw.TvOS`（TV 设备）。
 
 ### 核心模式
 
@@ -369,6 +375,7 @@ const isClient = isIOS || isAndroid
 | 控制栏显隐 | ❌ | ✅ | `lzc_tab.SetControlViewVisibility` |
 | 主题模式 | ❌ | ✅ | `lzc_theme.getThemeMode` |
 | 系统通知推送 | ✅ | ✅ | `currentDevice.notification.Notify` |
+| 应用窗口 viewport 调整 | ❌ | ❌（仅 PC 桌面客户端） | `AppCommon.SetViewportSize` |
 
 ### AppCommon 快速示例
 

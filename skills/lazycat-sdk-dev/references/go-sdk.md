@@ -43,6 +43,89 @@ func doSomething(ctx context.Context) error {
 
 **Important:** Always call `defer gw.Close()` to release resources.
 
+### APIGateway Available Services
+
+| Field | Client Type | Purpose |
+|-------|-------------|---------|
+| `gw.Users` | `common.UserManagerClient` | User management |
+| `gw.Devices` | `common.EndDeviceServiceClient` | End device (client) management |
+| `gw.Box` | `common.BoxServiceClient` | Box control (LED, power) |
+| `gw.HClients` | `common.HClientServiceClient` | Client device binding management |
+| `gw.PkgManager` | `sys.PackageManagerClient` | Application management |
+| `gw.Message` | `common.MessageServiceClient` | In-app messages |
+| `gw.Version` | `sys.VersionInfoServiceClient` | System version info |
+| `gw.Permisions` | `common.PermissionManagerClient` | Permission management |
+| `gw.FileTransfer` | `common.FileTransferServiceClient` | File transfer |
+| `gw.PeripheralDevice` | `common.PeripheralDeviceServiceClient` | Peripheral devices |
+| `gw.ISCSIService` | `common.ISCSIServiceClient` | iSCSI storage |
+| `gw.AccessControler` | `sys.AccessControlerServiceClient` | Access control |
+| `gw.Btrfs` | `sys.BtrfsUtilClient` | Btrfs operations |
+| `gw.DirMonitor` | `sys.DirMonitorClient` | Directory monitoring |
+| `gw.TvOS` | `sys.TvOSClient` | TV devices |
+
+---
+
+## HClient: Client Device Binding Management
+
+`gw.HClients` manages the binding between logged-in clients (HClient, i.e. 手机/桌面客户端实例) and logical client devices (`HClientDevice`). Useful for implementing device list management, renaming, and binding fixes in your own apps.
+
+### Service Methods
+
+| Method | Purpose |
+|--------|---------|
+| `ListHClients(uid)` | List all client instances of a user |
+| `ListHClientDevices(uid)` | List all logical client devices of a user |
+| `GetHClientDeviceCandidates(uid, hclientID)` | Get candidate devices when a client's device ID changed (dedupe assist) |
+| `SetHClientDeviceBinding(uid, hclientID, hclientDeviceID)` | Bind a client instance to a logical device |
+| `SetHClientDeviceRemarkName(uid, hclientDeviceID, remarkName)` | Set device remark name |
+| `DeleteHClient(uid, hclientID)` | Delete a client instance |
+| `DeleteHClientDevice(uid, hclientDeviceID)` | Delete a logical client device |
+
+> Note: `HClientDevice` no longer carries a `device_api_url` field (removed in recent SDK versions). Use `EndDevice.device_api_url` from `gw.Devices.ListEndDevices` when you need a Device API endpoint.
+
+### Example: List Client Devices and Update Binding
+
+```go
+import (
+    "context"
+    gohelper "gitee.com/linakesi/lzc-sdk/lang/go"
+)
+
+func ListClientDevices(ctx context.Context, uid string) error {
+    gw, err := gohelper.NewAPIGateway(ctx)
+    if err != nil {
+        return err
+    }
+    defer gw.Close()
+
+    reply, err := gw.HClients.ListHClientDevices(ctx, &common.ListHClientDevicesRequest{Uid: uid})
+    if err != nil {
+        return err
+    }
+    for _, dev := range reply.Devices {
+        // dev.Id, dev.RemarkName, dev.IsOnline, dev.LastLoginAt
+        // dev.Hclients: the client instances bound to this device
+        fmt.Printf("Device %s (%s) online=%v\n", dev.Id, dev.GetRemarkName(), dev.IsOnline)
+    }
+    return nil
+}
+
+func BindClientToDevice(ctx context.Context, uid, hclientID, hclientDeviceID string) error {
+    gw, err := gohelper.NewAPIGateway(ctx)
+    if err != nil {
+        return err
+    }
+    defer gw.Close()
+
+    _, err = gw.HClients.SetHClientDeviceBinding(ctx, &common.SetHClientDeviceBindingRequest{
+        Uid:             uid,
+        HclientId:       hclientID,
+        HclientDeviceId: hclientDeviceID,
+    })
+    return err
+}
+```
+
 ---
 
 ## User Management
