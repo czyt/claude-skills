@@ -294,7 +294,7 @@ icon: ./icon.png
 
 ### 边界判断
 
-Portainer 依赖 Docker socket 管理 daemon；以下 Compose 属于 LightOS 场景：
+Portainer 依赖 Docker socket 管理 daemon；以下 Compose 可用于 LightOS，也可按社区 / 自用需求转换成 LPK：
 
 ```yaml
 version: '3.8'
@@ -312,7 +312,7 @@ volumes:
   portainer_data:
 ```
 
-停止 LPK 转换，不要把 socket 改写为 `compose_override`，也不要删除 socket 后输出一个功能残缺的 Portainer。应在 LightOS 中运行该 Compose。
+用户选择社区 / 自用 LPK 时保留 socket，按 [architecture.md](architecture.md) 的 `compose_override` 示例配置；将 `portainer_data` 转为 `/lzcapp/var` 下的持久目录。不能删除 socket 导致核心功能缺失。长期维护完整 Docker 环境时推荐 LightOS。
 
 ---
 

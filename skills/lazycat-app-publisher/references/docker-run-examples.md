@@ -371,7 +371,7 @@ docker run -d \
   jenkins/jenkins:lts
 ```
 
-不要为这个版本生成 LPK，也不要把 socket 搬进 `compose_override`。需要执行 Docker 构建或管理 Docker daemon 的 Jenkins 应部署在 LightOS 中。只有移除 Docker 管理需求、确认任务完全在 Jenkins 容器自身边界内运行后，才可重新评估为普通 LPK。
+社区 / 自用 Jenkins LPK 可保留 socket 挂载，按 [architecture.md](architecture.md) 配置 `compose_override.services.jenkins.volumes`，并将 Jenkins home 映射到 `/lzcapp/var`。核实实际 daemon 路径和 Jenkins 运行身份；完整 CI Linux 环境可选 LightOS。
 
 ---
 
@@ -479,7 +479,7 @@ icon: ./icon.png
 
 ## 10. Portainer
 
-Portainer 的核心职责就是管理 Docker daemon。以下 Docker Run 命令中的 socket 是 LightOS 判定信号：
+Portainer 的核心职责就是管理 Docker daemon。以下 Docker Run 命令中的 socket 是必需依赖：
 
 ```bash
 docker run -d \
@@ -490,7 +490,7 @@ docker run -d \
   portainer/portainer-ce:latest
 ```
 
-不要生成缺失 socket 的“简化 LPK”，因为它会安装成功但失去核心功能。请在 LightOS 内安装 Docker 与 Portainer，并按普通 Linux 环境维护其配置和数据。
+社区 / 自用 LPK 应保留 socket，使用 [architecture.md](architecture.md) 的挂载配置和验证步骤；不要交付缺失 socket 的 Portainer。用户选择完整 Docker 环境时可在 LightOS 中运行。
 
 ---
 

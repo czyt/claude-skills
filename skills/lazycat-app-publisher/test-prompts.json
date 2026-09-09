@@ -113,5 +113,35 @@
     "id": 23,
     "prompt": "已有应用的 package.yml 是 package: cloud.lazycat.app.paperless，现在只想升级版本并统一包名前缀。能否改成 community.lazycat.app.paperless？",
     "expected": "不能改包名前缀；升级必须继续使用 cloud.lazycat.app.paperless，以保持应用身份、升级匹配和基于包名的地址不变。"
+  },
+  {
+    "id": 24,
+    "prompt": "社区自用的 Portainer 要转成 LPK，我明确要管理宿主 daemon，已确认目标微服 socket 是 /var/run/docker.sock。请给挂载配置，不上架商店。",
+    "expected": "保留 socket，提供 lzc-build.yml compose_override.services.portainer.volumes 挂载；继续转换，不强制 LightOS、不删除依赖、不要求官方批准；说明实际权限验证及 :ro 不限制 Docker API。"
+  },
+  {
+    "id": 25,
+    "prompt": "单实例应用要显示每个用户的未读数启动器图标，如何实现？列出最低系统版本、文件路径、限制、重启和删除后的行为。",
+    "expected": "1.6.2+，/lzcapp/run/launcher-icon/<uid>.png 优先于 icon.png 再 pkg/icon.png；真实 UID，PNG <=1 MiB，最高4 FPS，24种内容为缓存建议；原子替换，重启重新生成，删除回退，仅启动器生效。"
+  },
+  {
+    "id": 26,
+    "prompt": "exec://3000,/app/run.sh 升级系统1.6.2后不健康，但脚本只在8080启动服务。之前正常。如何解释并修复？",
+    "expected": "v1.6.2修复旧版遗漏的 exec 路由自动健康监测，统一声明端口与实际监听端口并验证，不关闭检查掩盖问题。"
+  },
+  {
+    "id": 27,
+    "prompt": "LPK v2 不支持 iPad 客户端，unsupported_platforms 写哪？是否能用 arm64 或 harmonyos？旧 v1 呢？",
+    "expected": "v2 package.yml 顶层，v1 manifest 顶层；ios 包含 iPad；客户端平台与镜像架构不同，上游没有 harmonyos 枚举，不能编造。"
+  },
+  {
+    "id": 28,
+    "prompt": "rclone 过去直接使用 /dev/fuse，系统升到1.6.1后不行了，如何迁移？",
+    "expected": "1.6.1取消默认挂载/dev/fuse；声明 fuse.mount 并用注入的 /lzcinit/fusermount3，/lzcinit已加入PATH；不能默认添加privileged。"
+  },
+  {
+    "id": 29,
+    "prompt": "request inject 的 when: [\"/api/*\"] 能匹配 /api 吗？想同时匹配目录根和子路径；当前客户端 ID 怎么取，和开发机 ID 一样吗？",
+    "expected": "严格前缀匹配不含/api，应 when: [\"/api\", \"/api/*\"]；ctx.client.id 来自Ingress且可为空，与ctx.dev.id和safe_uid不同；request/response同步。"
   }
 ]

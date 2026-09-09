@@ -667,7 +667,7 @@ compose_override:
         - /data/playground:/lzcapp/run/playground:ro
 ```
 
-`compose_override` 不承诺兼容性；使用前应向官方确认。若原应用依赖 Docker socket、Dockerd 或长期运行 Docker Compose，应改用 LightOS，而不是把宿主 socket 写入 LPK。
+`compose_override` 的宿主路径与权限兼容性需在目标系统验证。社区或用户自用明确需要 Docker socket 时保留挂载并继续转换；完整 Linux / Docker 环境推荐 LightOS。具体配置与验证见 [architecture.md](architecture.md)，不能把推荐方案写成强制禁令。
 
 ---
 
@@ -928,7 +928,7 @@ services:
 
 官方当前建议：需要在微服上运行 Docker、Docker Compose，或按传统 NAS 方式长期维护容器环境时，使用 LightOS，并在 LightOS 实例内按常规 Linux 方式安装 Docker。实例内的软件、配置和 Docker 数据会随实例持久保存。
 
-LPK 仍用于面向普通用户分发独立、可复现的一键安装应用。不要继续从旧文档复制 Dockge、`pg-docker`、Playground socket 或通过 `compose_override` 暴露宿主 Docker socket 的方案。
+LPK 用于分发独立、可复现的一键安装应用。社区或自用需要宿主 socket 时按 [architecture.md](architecture.md) 保留配置；旧 Dockge、`pg-docker` 与 Playground 路径须核实当前环境，不能直接假定可用。
 
 LightOS 拥有较高权限，只开放给可信用户或可信管理应用。lzcos 的 SSH 系统为只读系统，直接安装或修改的系统内容重启后会丢失。
 

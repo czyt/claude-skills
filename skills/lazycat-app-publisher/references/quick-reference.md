@@ -132,7 +132,7 @@ services:
 
 ### compose_override（覆盖不支持参数）
 
-**使用场景：** LPK 规范尚未覆盖、且已向官方备案的临时运行权限。不要用它暴露宿主 Docker socket；需要 Docker 环境时使用 LightOS。
+`compose_override` 的宿主路径与权限兼容性需在目标系统验证。社区或用户自用明确需要 Docker socket 时保留挂载并继续转换；完整 Linux / Docker 环境推荐 LightOS。具体配置与验证见 [architecture.md](architecture.md)，不能把推荐方案写成强制禁令。
 
 ```yaml
 # lzc-build.yml
@@ -159,7 +159,7 @@ compose_override:
         - /data/playground:/lzcapp/run/playground:ro
 ```
 
-`compose_override` 是不承诺兼容性的过渡机制，尤其不要依赖宿主内部路径。使用前需在开发者群说明或联系官方备案，否则商店审核可能拒绝。
+`compose_override` 不承诺跨版本兼容，宿主路径须在目标系统验证。上架商店时核对当期审核要求，必要时联系开发者群；社区 / 自用不以官方备案为前置条件。
 
 ### 资源限制
 

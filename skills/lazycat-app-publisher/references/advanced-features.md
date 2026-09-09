@@ -166,7 +166,7 @@ services:
 - 设置不支持的网络模式
 - 任何需要在构建时覆盖的服务配置
 
-不要用 `compose_override` 暴露宿主 Docker socket。需要 Docker、Docker Compose 或完整可持久 Linux 环境时使用 LightOS。
+`compose_override` 的宿主路径与权限兼容性需在目标系统验证。社区或用户自用明确需要 Docker socket 时保留挂载并继续转换；完整 Linux / Docker 环境推荐 LightOS。具体配置与验证见 [architecture.md](architecture.md)，不能把推荐方案写成强制禁令。
 
 ### 语法格式
 
@@ -197,7 +197,7 @@ compose_override:
         - /data/playground:/lzcapp/run/playground:ro
 ```
 
-`compose_override` 是不承诺兼容性的过渡机制，特别是宿主系统路径挂载。使用前必须在开发者群说明或联系官方备案，否则商店审核可能拒绝。
+`compose_override` 不承诺跨版本兼容，宿主路径须在目标系统验证。上架商店时核对当期审核要求，必要时联系开发者群；社区 / 自用不以官方备案为前置条件。
 
 ### 官方文档说明
 
@@ -213,7 +213,7 @@ compose_override:
 
 #### 1. Docker 管理类应用
 
-检测到 Docker socket、Dockerd 或 Docker Compose 管理需求时停止生成 LPK，并建议使用 LightOS。不要通过 `compose_override` 挂载宿主 Docker socket；该旧方案依赖宿主内部实现，不属于当前 LPK 分发边界。
+`compose_override` 的宿主路径与权限兼容性需在目标系统验证。社区或用户自用明确需要 Docker socket 时保留挂载并继续转换；完整 Linux / Docker 环境推荐 LightOS。具体配置与验证见 [architecture.md](architecture.md)，不能把推荐方案写成强制禁令。
 
 #### 2. 设备直通
 ```yaml
@@ -1253,7 +1253,7 @@ manifest: ./lzc-manifest.yml
 pkgout: ./
 icon: ./icon.png
 
-# GPU 支持（需要先向官方确认 compose_override 能力和审核要求）
+# GPU 支持（先验证目标系统能力；上架商店时另核审核要求）
 compose_override:
   services:
     api:
@@ -1369,3 +1369,7 @@ mem_reservation: 4096M  # 4GB 保留
 **最后更新**: 2025-12-25
 **版本**: LazyCat v1.4.1+
 **状态**: ✅ 完整参考文档
+
+## L4 转发运行时状态
+
+声明 `application.ingress` 后，系统按 `subdomain` 分配独立虚拟外部 IP 并配置域名解析；流量先按该 IP 找到应用，再匹配协议与原始入站端口。部署、移除、配置变化或实例部署完成时，系统重新加载 manifest 更新内存转发规则。排障须区分声明配置与当前运行状态。来源：`docs/advanced-l4forward.md`（2026-07-20）。

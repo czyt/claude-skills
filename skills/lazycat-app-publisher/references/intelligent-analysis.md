@@ -478,14 +478,11 @@ def smart_convert(compose_data):
 def detect_unsupported_params(service_config):
     unsupported = []
 
-    # Docker socket/Dockerd is a product-boundary decision, not an override.
-    volumes = str(service_config.get('volumes', []))
-    if 'docker.sock' in volumes:
-        return {
-            'requires_lightos': True,
-            'reason': 'Docker socket management is outside the LPK boundary',
-            'compose_override': []
-        }
+    # Preserve required socket mounts; deployment policy is a separate decision.
+    for volume in service_config.get('volumes', []):
+        source = volume.get('source', '') if isinstance(volume, dict) else str(volume).split(':', 1)[0]
+        if 'docker.sock' in source:
+            unsupported.append({'type': 'volumes', 'value': [volume]})
 
     # Check for devices
     if 'devices' in service_config:
@@ -502,12 +499,11 @@ def detect_unsupported_params(service_config):
         })
 
     return {
-        'requires_lightos': False,
         'compose_override': unsupported
     }
 ```
 
-当 `requires_lightos` 为 `true` 时，转换器必须停止生成 LPK 文件并解释 LightOS 边界；不能把该项目继续送入 `compose_override` 生成流程。
+socket 检测用于保留依赖，不用于拒绝 LPK。社区 / 自用场景按已确认路径生成挂载；路径未知时先核实。完整 Linux 环境推荐 LightOS，商店审核单独核对。详见 [architecture.md](architecture.md)。
 
 **Generated lzc-build.yml:**
 

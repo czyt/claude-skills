@@ -65,7 +65,7 @@
 
 ### 规则语义
 
-- 仅支持后缀 `*` 作为前缀匹配；无 `*` 时为精确匹配
+- 仅支持后缀 `*` 作为严格字符串前缀匹配；无 `*` 时为精确匹配。`/api/*` 匹配 `/api/` 和 `/api/users`，不匹配 `/api`；兼顾根路径时用 `when: ["/api", "/api/*"]`。`/api*` 还会匹配 `/api-v2`
 - `query` token 支持 `key` 或 `key=value`，单条规则内为 AND
 - **`#hash` 仅 browser 阶段支持，request/response 阶段不支持 hash 规则**
 
@@ -349,12 +349,18 @@ ctx.net.reachable(protocol, host, port, via?) -> bool
 - `host` 支持容器可达 hostname 或 IP 字面量
 - `reachable(...)` 为实时探测，默认超时约 `1200ms`
 
+### `ctx.client` - 当前客户端
+
+`ctx.client.id -> string`，由 Ingress 注入；请求没有客户端上下文时可能为空字符串。仅用于 request/response，不等同于 `ctx.safe_uid` 或开发机 ID。
+
 ### `ctx.dev` - 开发机状态
 
 ```javascript
 ctx.dev.id -> string        // 当前开发机 ID
 ctx.dev.online() -> bool    // 开发机在线状态（缓存）
 ```
+
+`ctx.dev.id` 当前从 `/lzcapp/var/_lzc_ext/dev.id` 读取；`ctx.dev.online()` 仅读缓存，由 lzcinit 按当前请求 UID 后台刷新。
 
 ### `ctx.fs` - 文件系统
 

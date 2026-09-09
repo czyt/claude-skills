@@ -1,11 +1,25 @@
 ---
 name: lazycat-app-publisher
-description: Use when converting Docker Compose or Docker Run apps to LazyCat LPK v2, publishing or updating LazyCat apps, copying Docker images to the LazyCat registry, selecting images in multi-service manifests, using lzc-publish, or configuring permissions, passwordless login, app interconnect, resources, run_as, FUSE, physical-display VT, L4 ingress, and file picker integration.
+description: Use when converting Docker Compose or Docker Run apps to LazyCat LPK v2, publishing or updating LazyCat apps, copying Docker images to the LazyCat registry, selecting images in multi-service manifests, using lzc-publish, or configuring permissions, passwordless login, app interconnect, resources, run_as, FUSE, physical-display VT, dynamic launcher icons, client platform support, L4 ingress, and file picker integration.
 ---
 
 # LazyCat 应用发布助手
 
-协助将 Docker Compose 文件和 Docker 命令转换为 LazyCat Cloud 应用配置，提供**智能依赖分析**和**自动配置优化**。
+将 Docker Compose / Docker Run 转为可构建、可验证的 LazyCat LPK，并维护已有应用的版本发布。
+
+## 按任务读取
+
+先确定交付目标与所用特性，再读取对应参考。已有明确选择直接沿用，只有缺少影响配置的信息时才询问。
+
+| 任务 / 症状 | 下一步 |
+|-------------|--------|
+| 社区 / 自用 Docker 管理应用需要 `docker.sock` | 保留必需挂载；按 [architecture.md](references/architecture.md) 核实 daemon 路径与权限后继续转换，不强制迁移 LightOS |
+| 上架商店或申请激励 | 查 [store-rule.md](references/store-rule.md)；将审核、激励与自用配置分别判断，不能推导 socket 全面禁令 |
+| 按用户更新启动器图标 | 查 [dynamic-icon.md](references/dynamic-icon.md)：v1.6.2+，运行时 PNG 文件，不新增 manifest 图标字段 |
+| 升级 v1.6.2 后 `exec://` 不健康 | 查 [healthcheck.md](references/healthcheck.md)：声明的本地端口已纳入自动监测，必须与实际监听一致 |
+| 升级 v1.6.1 后 FUSE 失效 | 默认 `/dev/fuse` 挂载已取消；声明 `fuse.mount` 并使用系统注入的 `/lzcinit/fusermount3` |
+| 限制 iPad 等客户端平台 | 查 [platform-support.md](references/platform-support.md)：v2 元数据在 `package.yml`，不混同 CPU 架构 |
+| request/response 注入、客户端 ID 或路径匹配 | 查 [injects.md](references/injects.md)：严格前缀匹配与各阶段 ctx API |
 
 ## Reference Documents
 
@@ -27,6 +41,8 @@ description: Use when converting Docker Compose or Docker Run apps to LazyCat LP
 | [references/app-interconnect.md](references/app-interconnect.md) | ⭐ 应用间访问 - `.lzcx` 地址、`X-HC-USER-TICKET`、委托权限 (v1.5.2+) |
 | [references/resource-export.md](references/resource-export.md) | ⭐ 资源导出 - Skill/MCP 导出与导入 (v1.5.2+) |
 | [references/file-picker-intercept.md](references/file-picker-intercept.md) | ⭐ 文件选择器拦截 - 应用商店强制要求 (v1.5.0+) |
+| [references/dynamic-icon.md](references/dynamic-icon.md) | 动态启动器图标：路径、用户优先级、恢复与版本限制 |
+| [references/platform-support.md](references/platform-support.md) | 客户端平台限制：LPK v1/v2 字段位置 |
 | [references/physical-display.md](references/physical-display.md) | ⭐ 物理显示器 VT - `vt.display`、`application.vt`、`/lzcinit/vt.active` (v1.6.1+) |
 | [references/cli-reference.md](references/cli-reference.md) | lzc-cli 命令参考 |
 | [references/spec.md](references/spec.md) | 官方规范参考 |
@@ -63,6 +79,7 @@ LPK v2（tar 格式，包含 `package.yml`）是 lzcos v1.5.0+ 才支持的特�
 | **`hidden_from_launcher`** | **v1.5.3** | **从启动器隐藏应用入口** |
 | **`user.notify` 权限** | **v1.6.0** | **向用户发送通知** |
 | **`fuse.mount` 权限** | **v1.6.1** | 注入 `/lzcinit/fusermount3`，`/lzcinit` 自动加入 `PATH` |
+| **动态启动器图标** | **v1.6.2** | `/lzcapp/run/launcher-icon/`；按用户覆盖、重启重新生成 |
 | **物理显示器 VT** | **v1.6.1** | `vt.display` + `application.vt: true`，不支持 `sysbox-runc` |
 | **文件选择器拦截** | **v1.5.0+** | **应用商店强制：有上传/下载必须接入** ⭐ |
 
@@ -83,6 +100,7 @@ LPK v2（tar 格式，包含 `package.yml`）是 lzcos v1.5.0+ 才支持的特�
 | 使用 **`user.notify` 权限** | **1.6.0** |
 | 使用 **`fuse.mount` 权限** | **1.6.1** |
 | 使用 **物理显示器 VT** | **1.6.1** |
+| 使用 **动态启动器图标** | **1.6.2** |
 | **文件选择器拦截（应用商店强制）** | **1.5.0** ⭐ |
 
 详见 [references/version-features.md](references/version-features.md) 和 [references/strict-constraints.md](references/strict-constraints.md)
@@ -99,7 +117,7 @@ LPK v2（tar 格式，包含 `package.yml`）是 lzcos v1.5.0+ 才支持的特�
 #### Step 1.0: 确认 LPK / LightOS 边界
 
 - 面向普通用户交付独立、可分发、可复现的一键安装应用：继续制作 LPK。
-- 需要长期维护完整 Linux 环境、通过包管理器安装软件、保存系统级配置/工具链、持续进入 shell，或主要目标是在环境中运行 Dockerd：优先使用 LightOS，不要强行转换为 LPK。
+- 需要长期维护完整 Linux 环境、通过包管理器安装软件、保存系统级配置/工具链、持续进入 shell，或主要目标是在环境中运行 Dockerd：推荐 LightOS；用户明确选择社区或自用 LPK 时保留所需 Docker socket 挂载，按 [references/architecture.md](references/architecture.md) 核实路径和权限后继续。
 - lzcos 的 SSH 系统是只读系统，直接通过 SSH 安装或修改的系统内容重启后会丢失；需要持久 Linux 环境时迁移到 LightOS。
 - LightOS 权限较高，只开放给可信用户或可信管理应用。
 
@@ -1435,7 +1453,7 @@ application:
 | **系统降级 (v1.3.8+)** | v1.3.8+ 降级后应用数据不可用 | **⚠️ 强制警告**：告知用户升级后不可降级 |
 | **user 字段格式 (v1.4.2)** | `services.xx.user: 1000` 会报错 | 必须使用引号：`user: "1000"` |
 | **environment 空值 (v1.4.2)** | `environment:` 空数组会报错 | 不要留空，删除字段或填写值 |
-| **compose_override 使用** | 需联系官方备案 | **⚠️ 检查点**：使用前提示用户联系开发者群或客服 |
+| **compose_override 使用** | 目标系统兼容性不保证 | 检查路径与服务权限并实测；商店发布另核审核要求，社区 / 自用不以官方备案为前置条件 |
 | **文档路径 (v1.5.0)** | `/lzcapp/document` 废弃 | 使用新路径 `/lzcapp/documents` |
 | **应用文稿数据误用** | 数据库/索引/配置写入 `/lzcapp/documents` | 内部数据改用 `/lzcapp/var`；文稿只保存用户可理解文件 |
 | **run_as 冲突 (v1.6.0)** | `application.run_as` 与 `user` 同时使用 | **⚠️ 强制警告**：run_as 不得与 user 在同一级别同时使用 |

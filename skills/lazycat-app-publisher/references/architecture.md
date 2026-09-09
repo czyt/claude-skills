@@ -1,41 +1,40 @@
-# LPK、LightOS 与 Docker 的边界
+# LPK、LightOS 与 Docker 的选择
 
-官方当前不再指导用户直接维护 lzcos 上的 Playground Docker、Dockge 或宿主 Docker socket。需要 Docker、Docker Compose 或完整 Linux 环境时，使用 LightOS。
+LPK 用于分发独立、可复现的应用；LightOS 适合长期维护完整 Linux 环境。官方推荐 Docker 环境使用 LightOS，不等于社区或用户自用 LPK 禁止使用 `docker.sock`。
 
-## 选择模型
+## 按交付目标选择
 
-| 目标 | 选择 | 原因 |
-|------|------|------|
-| 向普通用户交付独立应用 | LPK | 可分发、可复现、一键安装，应用边界清晰 |
-| 长期使用包管理器、工具链、shell、系统服务 | LightOS | 完整 Linux 环境和系统级状态按实例持久保存 |
-| 运行 Docker / Docker Compose、自用 NAS 容器 | LightOS 内安装 Docker | 避免依赖 lzcos 宿主内部实现和高危 socket |
-| 临时查看 lzcos | SSH | 系统为只读；系统级修改重启后会丢失 |
+| 场景 | 处理 |
+|------|------|
+| 分发独立应用 | 制作 LPK，保留应用必需功能 |
+| 长期维护包管理器、工具链、系统服务或 Docker 环境 | 推荐 LightOS；用户已选择 LPK 时按其需求继续 |
+| 社区或自用应用明确需要宿主 Docker socket | 保留挂载，核实目标 daemon、实际路径和服务身份权限后生成配置 |
+| 上架商店 | 单独核对当期审核规则；未查到明确条文时不声称 socket 被商店禁止，也不保证审核通过 |
 
-## LPK 原则
+## 社区 / 自用 socket 挂载
 
-- 把前端、后端、路由和应用级数据封装为可复现包。
-- 应用内部持久数据写入 `/lzcapp/var`，可清理缓存写入 `/lzcapp/cache`。
-- 用户可理解和管理的文件才写入 `/lzcapp/documents/<uid>`。
-- 不挂载宿主 Docker socket，不依赖 `pg-docker`、Playground daemon 或 lzcos 内部路径。
-- 高级权限只按官方 `package.yml.permissions` 声明，避免用 `compose_override` 绕过权限边界。
+已有授权与路径信息直接复用；仅缺少实际 socket 路径或目标 daemon 时补充确认。不能仅因检测到 `docker.sock` 拒绝转换、强制迁移 LightOS，或删除依赖后交付功能残缺的 Portainer/Jenkins。
 
-## LightOS 原则
+以下假定目标微服的 `/var/run/docker.sock` 已确认是要管理的 daemon socket，且 manifest 的服务名是 `portainer`。在 `lzc-build.yml` 通过 Compose 扩展保留挂载：
 
-- 用户从应用商店安装 LightOS 入口应用，并在其中创建、管理实例。
-- 在实例内按普通 Linux 流程安装 Docker、软件包、脚本和服务。
-- 软件、系统配置与 Docker 数据跟随 LightOS 实例持久化。
-- LightOS 权限较高，只开放给可信用户或可信管理应用。
+```yaml
+manifest: ./lzc-manifest.yml
+pkgout: ./
+icon: ./icon.png
+compose_override:
+  services:
+    portainer:
+      volumes:
+        - /var/run/docker.sock:/var/run/docker.sock
+```
 
-## 迁移旧方案
+- 该宿主路径只是示例，不是所有 lzcos 版本的稳定接口。使用已核实的真实路径；旧 `/data/playground/docker.sock`、`pg-docker` 或 Playground daemon 不能假定仍存在。
+- 在目标主机执行 `test -S /var/run/docker.sock`，检查 socket owner/group 与容器实际运行身份；部署后从应用内验证 daemon API 连通性及所需操作。
+- socket 通常授予目标 Docker daemon 的管理能力；挂载 `:ro` 不会把 Docker API 变成只读。不要因权限失败直接加 `privileged: true`，先排查路径、UID/GID 与 daemon 状态。
+- `compose_override` 的兼容性须在目标系统验证，不虚构 `docker.sock` permission id。构建通过不代表运行时挂载成功。
 
-遇到旧项目使用以下任一模式时，不要照抄旧教程：
+## 数据与环境
 
-- `/data/playground/docker.sock`
-- `pg-docker`
-- Dockge LPK 激活独立 Docker daemon
-- 通过 `compose_override` 暴露宿主 Docker socket
-- 依赖 lzcos SSH 修改持久保存
+LPK 内部数据写 `/lzcapp/var`，缓存写 `/lzcapp/cache`；用户可管理的文件写 `/lzcapp/documents/<uid>`。LightOS 实例可持久保存软件、系统配置和 Docker 数据，只开放给可信用户。lzcos SSH 系统级修改重启后会丢失。
 
-先判断项目是否仍应作为独立 LPK 分发；如果核心需求是维护容器环境或完整 Linux 状态，迁移到 LightOS。
-
-官方来源：`docs/dockerd-support.md`、`docs/advanced-lightos.md`、`docs/framework.md`（lzc-developer-doc，2026-08-05 同步）。
+来源：`lzc-developer-doc/docs/dockerd-support.md`、`docs/advanced-lightos.md`、`docs/framework.md`。社区 / 自用 socket 处理是本 skill 的维护策略（2026-09-09 用户明确要求），不是上游新增承诺或商店审核结论。

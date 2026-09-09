@@ -316,3 +316,9 @@ For applications accessing user documents:
 # Only legacy /lzcapp/run/mnt/home compatibility uses:
 # ext_config.enable_document_access: true
 ```
+
+## v1.6.2 兼容性与动态图标
+
+- 动态启动器图标要求 `min_os_version: 1.6.2`，详见 [dynamic-icon.md](dynamic-icon.md)。
+- v1.6.2 将 `exec://` 路由声明的本地端口纳入自动健康监测；脚本必须在该端口提供服务，详见 [healthcheck.md](healthcheck.md)。
+- v1.6.1 起取消默认挂载 `/dev/fuse`；FUSE 应声明 `fuse.mount` 并使用注入的 `/lzcinit/fusermount3`。

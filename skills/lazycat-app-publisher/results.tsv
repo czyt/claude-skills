@@ -12,3 +12,6 @@ timestamp	commit	skill	old_score	new_score	status	dimension	note	eval_mode
 2026-06-22T10:30	auto-optimize/20260622-1030	lazycat-app-publisher	87.95	89.1	keep	实测表现	区分记忆值和用户指定的 service，修复边界 bug	full_test
 2026-06-22T10:45	auto-optimize/20260622-1030	lazycat-app-publisher	89.1	86.8	revert	实测表现	补充多镜像处理流程指导（过度文档化）	full_test
 2026-08-24T00:30	working-tree	lazycat-app-publisher	-	3-0 better	keep	包名输出契约	要求输出完整 package、前缀和来源，paired judge 3-0	paired
+2026-09-09T00:00	working-tree	lazycat-app-publisher	-	84.0	baseline	9维triage	新增ID24-29检索应用测试6/6；非设备部署；runtime_warn=0	full_test
+2026-09-09T00:00	working-tree	lazycat-app-publisher	-	3-0 better	keep	授权边界与资源导航	同步后主文档paired比较，clear/slight/clear；移除自用备案门槛、前置任务入口；详见docs/reports/lazycat-app-publisher-2026-09-09.md	paired
+2026-09-09T00:00	working-tree	lazycat-app-publisher	7/8	8/8	keep	旧能力回归	ID15先失败，核对上游并补齐VT activate成功返回语义后复测PASS；未实机部署	full_test

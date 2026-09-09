@@ -740,7 +740,7 @@ application:
 | 字段名 | 类型 | 必需 | 描述 |
 |--------|------|------|------|
 | `ext_config` | `ExtConfig` | ❌ | 扩展配置 |
-| `unsupported_platforms` | `[]string` | ❌ | 不支持的平台列表 |
+| `unsupported_platforms` | `[]string` | ❌ | 不支持的客户端平台列表（非 CPU 架构）；LPK v2 放 package.yml 顶层，v1 放 manifest 顶层，见 [platform-support.md](platform-support.md) |
 | `application` | `ApplicationConfig` | ✅ | 应用配置 |
 | `services` | `map[string]ServiceConfig` | ✅ | 服务配置 |
 | `locales` | `map[string]I10nConfigItem` | ❌ | 多语言配置 |

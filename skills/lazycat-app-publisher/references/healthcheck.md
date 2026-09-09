@@ -490,3 +490,11 @@ Docker Compose → LazyCat
 
 **最后更新：** 2025-12-25
 **参考文档：** LazyCat 官方文档 v1.4.1
+
+## v1.6.2：exec 路由自动健康监测兼容性
+
+从 lzcos **v1.6.2（2026-09-09）** 起，`routes` 中 `exec://$port,$exec_file_path` 的本地端口会正确纳入自动健康监测。旧版本遗漏此类路由；依赖遗漏行为且未在 `$port` 提供服务的 LPK 升级后可能不健康。这是修复引入的不兼容变化，不是 `services.*.healthcheck` 字段改名。
+
+例如 `exec://3000,/app/run.sh` 的脚本只监听 8080：将路由改为 `exec://8080,/app/run.sh`，或让程序实际监听 3000。先核对脚本、监听端口和启动日志，再部署验证服务可访问且健康；不要仅靠关闭健康检查掩盖不一致。
+
+来源：`lzc-developer-doc/docs/changelog.md` v1.6.2。

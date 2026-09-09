@@ -70,7 +70,7 @@ compose_override:
         - /data/playground:/lzcapp/run/playground:ro
 ```
 
-`compose_override` 不承诺兼容性，涉及宿主路径或高级权限前必须向官方确认。需要 Docker socket、Dockerd 或 Docker Compose 管理环境时使用 LightOS，不要生成 LPK socket 挂载。
+`compose_override` 的宿主路径与权限兼容性需在目标系统验证。社区或用户自用明确需要 Docker socket 时保留挂载并继续转换；完整 Linux / Docker 环境推荐 LightOS。具体配置与验证见 [architecture.md](architecture.md)，不能把推荐方案写成强制禁令。
 
 ### ❌ 错误示例
 
@@ -239,7 +239,7 @@ params:
 | `license` | `string` | 可选 | 许可证标识或链接 |
 | `homepage` | `string` | 可选 | 主页或反馈地址 |
 | `min_os_version` | `string` | 可选 | 要求的最低系统版本 |
-| `unsupported_platforms` | `[]string` | 可选 | 不支持的平台列表 |
+| `unsupported_platforms` | `[]string` | 可选 | 不支持的客户端平台列表（非 CPU 架构）；LPK v2 放 package.yml 顶层，v1 放 manifest 顶层，见 [platform-support.md](platform-support.md) |
 | `admin_only` | `bool` | 可选 | 是否仅管理员可见 |
 | `locales` | `map[string]PackageLocaleConfig` | 可选 | 多语言元数据 |
 | `permissions` | `PermissionsConfig` | 可选 | 声明应用需要的权限 |
